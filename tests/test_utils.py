@@ -6,7 +6,7 @@
 #
 
 from datetime import datetime
-from unittest import mock
+from datetime import timedelta
 
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
@@ -14,8 +14,6 @@ from django.test import override_settings
 
 from django_altcha import get_altcha_challenge
 from django_altcha import get_hmac_key
-
-mock_now = datetime(2025, 10, 10)
 
 
 class DjangoAltchaUtilsTest(TestCase):
@@ -26,29 +24,43 @@ class DjangoAltchaUtilsTest(TestCase):
             with self.assertRaises(ImproperlyConfigured):
                 get_hmac_key()
 
-    def test_get_altcha_challenge_max_number(self):
+    def test_get_altcha_challenge_algorithm_and_cost(self):
+        # Default ALTCHA_ALGORITHM and ALTCHA_COST are applied
         challenge = get_altcha_challenge()
-        self.assertEqual(1000000, challenge.max_number)
-        challenge = get_altcha_challenge(max_number=50)
-        self.assertEqual(50, challenge.max_number)
+        self.assertEqual("PBKDF2/SHA-256", challenge.parameters.algorithm)
+        self.assertEqual(5000, challenge.parameters.cost)
 
-    @mock.patch("django_altcha.datetime.datetime")
-    def test_get_altcha_challenge_expire(self, mock_datetime):
-        mock_datetime.now.return_value = mock_now
-        mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+        # Provided arguments are applied
+        challenge = get_altcha_challenge(algorithm="SHA-256", cost=50)
+        self.assertEqual("SHA-256", challenge.parameters.algorithm)
+        self.assertEqual(50, challenge.parameters.cost)
 
+        # Custom settings are applied
+        with override_settings(ALTCHA_ALGORITHM="SCRYPT", ALTCHA_COST=1024):
+            challenge = get_altcha_challenge()
+            self.assertEqual("SCRYPT", challenge.parameters.algorithm)
+            self.assertEqual(1024, challenge.parameters.cost)
+
+    def test_get_altcha_challenge_is_signed(self):
+        challenge = get_altcha_challenge()
+        self.assertEqual(64, len(challenge.signature))
+        # Each challenge is unique
+        self.assertNotEqual(challenge.signature, get_altcha_challenge().signature)
+
+    def assertExpiresIn(self, challenge, milliseconds):
+        """Assert the challenge expires `milliseconds` from now, within a second."""
+        expected = datetime.now() + timedelta(milliseconds=milliseconds)
+        self.assertAlmostEqual(
+            expected.timestamp(), challenge.parameters.expires_at, delta=1
+        )
+
+    def test_get_altcha_challenge_expire(self):
         # Default ALTCHA_CHALLENGE_EXPIRE is applied
-        challenge = get_altcha_challenge()
-        salt_expires = challenge.salt.split("?expires=")[-1]
-        self.assertIn("1760073600", salt_expires)
+        self.assertExpiresIn(get_altcha_challenge(), 1200000)
 
         # Provided `expires` argument is applied
-        challenge = get_altcha_challenge(expires=10000)
-        salt_expires = challenge.salt.split("?expires=")[-1]
-        self.assertIn("1760072410", salt_expires)
+        self.assertExpiresIn(get_altcha_challenge(expires=10000), 10000)
 
         # Custom ALTCHA_CHALLENGE_EXPIRE value is applied
         with override_settings(ALTCHA_CHALLENGE_EXPIRE=9999):
-            challenge = get_altcha_challenge()
-            salt_expires = challenge.salt.split("?expires=")[-1]
-            self.assertIn("1760072409", salt_expires)
+            self.assertExpiresIn(get_altcha_challenge(), 9999)

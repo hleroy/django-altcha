@@ -7,6 +7,10 @@ By default, CAPTCHA validation operates in a **fully self-hosted mode**,
 **eliminating the need for external services** while ensuring privacy and control over
 the verification process.
 
+The ALTCHA v3 widget is bundled with the package, together with a
+**modular build for projects enforcing a strict Content Security Policy**,
+enabled with the `ALTCHA_STRICT_CSP` setting.
+
 ```{include} ../../README.md
 ```
 

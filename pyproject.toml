@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-altcha"
-version = "1.0.0"
+version = "1.1.0"
 description = "Django field and widget for Altcha CAPTCHA."
 readme = "README.md"
 license = "MIT"
@@ -30,15 +30,20 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "Django>=4.2",
-    "altcha>=2.0.0,<3.0.0",
+    "altcha>=2.1.0,<3.0.0",
 ]
 keywords = ["captcha", "django", "widget", "form", "altcha"]
 
 [project.optional-dependencies]
+# Required to generate and verify ARGON2ID challenges.
+argon2 = [
+    "argon2-cffi",
+]
 dev = [
     "build",
     "ruff",
     "pytest-django",
+    "argon2-cffi",
 ]
 docs = [
     "Sphinx>=5.0.2",

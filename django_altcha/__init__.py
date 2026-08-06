@@ -9,6 +9,7 @@ import base64
 import datetime
 import json
 import logging
+import warnings
 
 from django import forms
 from django.core.cache import caches
@@ -16,6 +17,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.forms.widgets import HiddenInput
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
+from django.utils.html import format_html
+from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.decorators.http import require_GET
@@ -24,10 +27,63 @@ import altcha
 
 from .conf import get_setting
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 VERSION = __version__
 
 logger = logging.getLogger(__name__)
+
+# Options rendered as attributes of the `<altcha-widget>` element.
+# https://altcha.org/docs/v2/widget-integration/
+WIDGET_ATTRIBUTES = (
+    "auto",
+    "challenge",
+    "configuration",
+    "display",
+    "language",
+    "name",
+    "theme",
+    "type",
+    "workers",
+)
+
+# Options collected into the JSON-encoded `configuration` attribute.
+# The `fetch` and `verifyFunction` options are intentionally left out as they
+# require a JavaScript function value that cannot be expressed from Python.
+WIDGET_CONFIGURATION = (
+    "audioChallengeLanguage",
+    "barPlacement",
+    "codeChallenge",
+    "codeChallengeDisplay",
+    "credentials",
+    "debug",
+    "disableAutoFocus",
+    "floatingAnchor",
+    "floatingOffset",
+    "floatingPersist",
+    "floatingPlacement",
+    "hideFooter",
+    "hideLogo",
+    "humanInteractionSignature",
+    "minDuration",
+    "mockError",
+    "overlayContent",
+    "popoverPlacement",
+    "retryOnOutOfMemoryError",
+    "serverVerificationFields",
+    "serverVerificationTimeZone",
+    "setCookie",
+    "test",
+    "timeout",
+    "validationMessage",
+    "verifyUrl",
+)
+
+# ALTCHA v2 widget options replaced by a single `challenge` option in v3.
+# https://github.com/altcha-org/altcha/blob/main/MIGRATION-v2.md
+RENAMED_OPTIONS = {
+    "challengeurl": "challenge",
+    "challengejson": "challenge",
+}
 
 
 def get_hmac_key():
@@ -58,28 +114,67 @@ def mark_challenge_used(challenge, timeout):
     get_cache().set(key=challenge, value=True, timeout=timeout)
 
 
-def get_altcha_challenge(max_number=None, expires=None):
+def get_altcha_challenge(algorithm=None, cost=None, expires=None):
     """
-    Generate and return an ALTCHA v1 challenge.
+    Generate and return an ALTCHA challenge.
 
     Attributes:
-        max_number (int): Maximum number to use for the challenge.
+        algorithm (str): Key derivation function to use for the Proof-of-Work.
+        cost (int): Algorithm-specific cost, iterations for PBKDF2 and SHA.
         expires (int): Expiration time for the challenge in milliseconds.
 
     Returns:
-        altcha.ChallengeV1: The generated challenge.
+        altcha.Challenge: The generated challenge.
     """
     expires = expires or get_setting("ALTCHA_CHALLENGE_EXPIRE")
-    options = {
-        "hmac_key": get_hmac_key(),
-        "expires": datetime.datetime.now() + datetime.timedelta(milliseconds=expires),
-    }
 
-    if max_number is not None:
-        options["max_number"] = max_number
+    return altcha.create_challenge(
+        algorithm=algorithm or get_setting("ALTCHA_ALGORITHM"),
+        cost=cost if cost is not None else get_setting("ALTCHA_COST"),
+        expires_at=datetime.datetime.now() + datetime.timedelta(milliseconds=expires),
+        hmac_secret=get_hmac_key(),
+    )
 
-    challenge = altcha.create_challenge_v1(altcha.ChallengeOptionsV1(**options))
-    return challenge
+
+def get_js_url():
+    """Return the URL of the ALTCHA widget JavaScript module."""
+    if get_setting("ALTCHA_STRICT_CSP"):
+        return get_setting("ALTCHA_JS_STRICT_CSP_URL")
+    return get_setting("ALTCHA_JS_URL")
+
+
+def get_workers_register_script():
+    """
+    Return the URL of the worker registration module and its extra attributes.
+
+    The module locates the worker scripts next to itself, unless the
+    ``ALTCHA_WORKERS_URL`` setting declares another location.
+    """
+    attrs = {}
+    workers_url = get_setting("ALTCHA_WORKERS_URL")
+    if workers_url:
+        attrs["data-altcha-workers-url"] = workers_url
+    return get_setting("ALTCHA_WORKERS_REGISTER_URL"), attrs
+
+
+class ModuleScript(str):
+    """
+    A ``forms.Media`` JavaScript entry rendered as an ES module ``<script>``.
+
+    ALTCHA is distributed as an ES module, which the default ``forms.Media``
+    rendering, a plain ``<script src="...">``, cannot load.
+    """
+
+    def __new__(cls, url, attrs=None):
+        instance = super().__new__(cls, url)
+        instance.attrs = attrs or {}
+        return instance
+
+    def __html__(self):
+        extra_attrs = format_html_join("", ' {}="{}"', self.attrs.items())
+        return format_html(
+            '<script src="{}" type="module"{}></script>', str(self), extra_attrs
+        )
 
 
 class AltchaWidget(HiddenInput):
@@ -90,31 +185,71 @@ class AltchaWidget(HiddenInput):
         self.options = options or {}
         super().__init__(*args, **kwargs)
 
+    @property
+    def media(self):
+        """
+        Return the assets of the widget, for projects relying on ``form.media``
+        rather than on the assets included by the widget template.
+        """
+        js = [ModuleScript(get_js_url())]
+
+        if get_setting("ALTCHA_INCLUDE_TRANSLATIONS"):
+            js.append(ModuleScript(get_setting("ALTCHA_JS_TRANSLATIONS_URL")))
+
+        if not get_setting("ALTCHA_STRICT_CSP"):
+            return forms.Media(js=js)
+
+        # The modular build registers no algorithm on its own, the workers have
+        # to be declared explicitly. This must happen after the widget module is
+        # evaluated, hence the entry being appended last.
+        js.append(ModuleScript(*get_workers_register_script()))
+        return forms.Media(css={"all": [get_setting("ALTCHA_CSS_URL")]}, js=js)
+
     def get_context(self, name, value, attrs):
-        """Generate the widget context, including ALTCHA JS URL and challenge."""
+        """Generate the widget context, including ALTCHA assets and challenge."""
         context = super().get_context(name, value, attrs)
-        context["js_altcha_url"] = get_setting("ALTCHA_JS_URL")
+        context["strict_csp"] = get_setting("ALTCHA_STRICT_CSP")
+        context["js_altcha_url"] = get_js_url()
+        context["css_altcha_url"] = get_setting("ALTCHA_CSS_URL")
         context["js_translations_url"] = get_setting("ALTCHA_JS_TRANSLATIONS_URL")
         context["include_translations"] = get_setting("ALTCHA_INCLUDE_TRANSLATIONS")
+        workers_register_url, workers_attrs = get_workers_register_script()
+        context["js_workers_register_url"] = workers_register_url
+        context["workers_attrs"] = workers_attrs
+        context["widget"]["altcha_options"] = self.get_altcha_options()
+        return context
 
-        # If a `challengeurl` is provided, the challenge will be fetched from this URL.
-        # This can be a local Django view or an external API endpoint.
+    def get_altcha_options(self):
+        """
+        Return the ``<altcha-widget>`` attributes for this widget, with the
+        options that are not HTML attributes gathered into ``configuration``.
+        """
+        options = {
+            key: value for key, value in self.options.items() if value is not None
+        }
+
+        # If a `challenge` URL is provided, the challenge will be fetched from this
+        # URL. This can be a local Django view or an external API endpoint.
         # If not provided, a unique challenge is generated locally in a self-hosted
-        # mode.
+        # mode and inlined as JSON.
         # Since the challenge must be fresh for each form rendering, it is generated
         # inside `get_context`, not `__init__`.
-        if not self.options.get("challengeurl"):
-            challenge = get_altcha_challenge(
-                max_number=self.options.get("maxnumber"),
-                expires=self.options.get("expire"),
-            )
-            self.options["challengejson"] = json.dumps(challenge.__dict__)
+        if not options.get("challenge"):
+            options["challenge"] = get_altcha_challenge().to_dict()
 
-        # JSON-encode list/dict values before setting in context
-        encoded_options = self.encode_values(self.options)
-        context["widget"]["altcha_options"] = encoded_options
+        configuration = options.pop("configuration", None) or {}
+        if isinstance(configuration, str):
+            configuration = json.loads(configuration)
+        configuration = dict(configuration)
 
-        return context
+        for key in list(options):
+            if key not in WIDGET_ATTRIBUTES:
+                configuration[key] = options.pop(key)
+
+        if configuration:
+            options["configuration"] = configuration
+
+        return self.encode_values(options)
 
     @staticmethod
     def encode_values(data):
@@ -135,93 +270,26 @@ class AltchaField(forms.Field):
         "required": _("ALTCHA CAPTCHA token is missing."),
         "replay": _("Challenge has already been used."),
     }
-    default_options = {
-        ## Required options:
-        #
-        # URL of your server to fetch the challenge from.
-        "challengeurl": None,
-        # JSON-encoded challenge data.
-        # If avoiding an HTTP request to challengeurl, provide the data here.
-        "challengejson": None,
-        ## Additional options:
-        #
-        # Automatically verify without user interaction.
-        # Possible values: "off", "onfocus", "onload", "onsubmit".
-        "auto": None,
-        # Whether to include credentials with the challenge request
-        # Possible values: "omit", "same-origin", "include".
-        "credentials": None,
-        # A custom fetch function for retrieving the challenge.
-        # Accepts `url: string` and `init: RequestInit` as arguments and must return a
-        # `Response`.
-        "customfetch": None,
-        # Artificial delay before verification (in milliseconds, default: 0).
-        "delay": None,
-        # If true, prevents the code-challenge input from automatically receiving
-        # focus on render (defaults to "false").
-        "disableautofocus": None,
-        # Challenge expiration duration (in milliseconds).
-        "expire": None,
-        # Enable floating UI.
-        # Possible values: "auto", "top", "bottom".
-        "floating": None,
-        # CSS selector of the "anchor" to which the floating UI is attached.
-        # Default: submit button in the related form.
-        "floatinganchor": None,
-        # Y offset from the anchor element for the floating UI (in pixels, default: 12).
-        "floatingoffset": None,
-        # Enable a "persistent" mode to keep the widget visible under specific
-        # conditions.
-        # Possible values: "true", "false", "focus".
-        "floatingpersist": None,
-        # Hide the footer (ALTCHA link).
-        "hidefooter": None,
-        # Hide the ALTCHA logo.
-        "hidelogo": None,
-        # The checkbox id attribute.
-        # Useful for multiple instances of the widget on the same page.
-        "id": None,
-        # The ISO alpha-2 code of the language to use
-        # (the language file be imported from `altcha/i18n/*`).
-        "language": None,
-        # Max number to iterate to (default: 1,000,000).
-        "maxnumber": None,
-        # Name of the hidden field containing the payload (defaults to "altcha").
-        "name": None,
-        # Enables overlay UI mode (automatically sets `auto="onsubmit"`).
-        "overlay": None,
-        # CSS selector of the HTML element to display in the overlay modal before the
-        # widget.
-        "overlaycontent": None,
-        # JSON-encoded translation strings for customization.
-        "strings": None,
-        # Automatically re-fetch and re-validate when the challenge expires
-        # (default: true).
-        "refetchonexpire": None,
-        # Number of workers for Proof of Work (PoW).
-        # Default: navigator.hardwareConcurrency or 8 (max value: 16).
-        "workers": None,
-        # URL of the Worker script (default: ./worker.js, only for external builds).
-        "workerurl": None,
-        # Data Obfuscation options:
-        #
-        # The obfuscated data provided as a base64-encoded string (requires
-        # altcha/obfuscation plugin).
-        # Use only without challengeurl/challengejson.
-        "obfuscated": None,
-        ## Development / testing options:
-        #
-        # Print log messages in the console (for debugging).
-        "debug": None,
-        # Causes verification to always fail with a "mock" error.
-        "mockerror": None,
-        # Generates a "mock" challenge within the widget, bypassing the request to
-        # challengeurl.
-        "test": None,
-    }
+    # Options supported by the ALTCHA v3 widget, all optional.
+    # The HTML attributes are documented at:
+    # https://altcha.org/docs/v2/widget-integration/#html-attributes
+    # Every other option is passed through the `configuration` attribute:
+    # https://altcha.org/docs/v2/widget-integration/#configuration
+    default_options = dict.fromkeys(WIDGET_ATTRIBUTES + WIDGET_CONFIGURATION)
 
     def __init__(self, *args, **kwargs):
         """Initialize the ALTCHA field and pass widget options for rendering."""
+        for old_name, new_name in RENAMED_OPTIONS.items():
+            if old_name in kwargs:
+                warnings.warn(
+                    f"The AltchaField {old_name!r} option was removed in ALTCHA v3, "
+                    f"use {new_name!r} instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                kwargs.setdefault(new_name, kwargs.pop(old_name))
+                kwargs.pop(old_name, None)
+
         widget_options = {
             key: kwargs.pop(key, self.default_options[key])
             for key in self.default_options
@@ -246,17 +314,13 @@ class AltchaField(forms.Field):
             )
 
         try:
-            verified, error = altcha.verify_solution_v1(
-                payload=value,
-                hmac_key=get_hmac_key(),
-                check_expires=True,
-            )
+            result = altcha.verify_solution(payload=value, hmac_secret=get_hmac_key())
         except Exception:
             logger.exception("ALTCHA validation raised an unexpected exception")
             raise forms.ValidationError(self.error_messages["error"], code="error")
 
-        if not verified:
-            logger.warning("ALTCHA validation failed: %s", error)
+        if not result.verified:
+            logger.warning("ALTCHA validation failed: %s", get_failure_reason(result))
             raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
 
         self.replay_attack_protection(payload=value)
@@ -264,9 +328,7 @@ class AltchaField(forms.Field):
     def replay_attack_protection(self, payload):
         """Protect against replay attacks by ensuring each challenge is single-use."""
         try:
-            # Decode payload from base64 and parse JSON to extract the challenge
-            payload_data = json.loads(base64.b64decode(payload).decode())
-            challenge = payload_data["challenge"]
+            challenge = get_challenge_identifier(payload)
         except Exception:
             logger.exception(
                 "ALTCHA payload could not be decoded for replay protection"
@@ -281,8 +343,36 @@ class AltchaField(forms.Field):
         mark_challenge_used(challenge, timeout=get_challenge_expire_seconds())
 
 
+def get_challenge_identifier(payload):
+    """
+    Return a value uniquely identifying the challenge solved by ``payload``.
+
+    The signature of a challenge is an HMAC over its parameters, which include a
+    random nonce and salt, and is therefore unique to a single challenge.
+    """
+    payload_data = json.loads(base64.b64decode(payload).decode())
+    signature = payload_data["challenge"]["signature"]
+    if not signature:
+        raise ValueError("Missing challenge signature")
+    return signature
+
+
+def get_failure_reason(result):
+    """Return a human readable reason for a failed ``VerifySolutionResult``."""
+    if getattr(result, "error", None):
+        return result.error
+    if result.expired:
+        return "challenge expired"
+    if result.invalid_signature:
+        return "invalid challenge signature"
+    if result.invalid_solution:
+        return "invalid solution"
+    return "unknown error"
+
+
 class AltchaChallengeView(View):
-    max_number = None
+    algorithm = None
+    cost = None
     expires = None
 
     @method_decorator(require_GET)
@@ -291,9 +381,10 @@ class AltchaChallengeView(View):
 
     def get(self, request, *args, **kwargs):
         # Use view's class attributes or kwargs
-        max_number = kwargs.get("max_number", self.max_number)
-        expires = kwargs.get("expires", self.expires)
-
-        challenge = get_altcha_challenge(max_number=max_number, expires=expires)
+        challenge = get_altcha_challenge(
+            algorithm=kwargs.get("algorithm", self.algorithm),
+            cost=kwargs.get("cost", self.cost),
+            expires=kwargs.get("expires", self.expires),
+        )
         logger.debug("ALTCHA challenge issued")
-        return JsonResponse(challenge.__dict__)
+        return JsonResponse(challenge.to_dict())

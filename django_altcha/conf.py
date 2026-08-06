@@ -34,10 +34,41 @@ _DEFAULTS = {
     "ALTCHA_JS_URL": "altcha/altcha.min.js",
     # URL of the Altcha translations JavaScript file.
     # Same resolution rules as ALTCHA_JS_URL above.
-    "ALTCHA_JS_TRANSLATIONS_URL": "altcha/dist_i18n/all.min.js",
+    "ALTCHA_JS_TRANSLATIONS_URL": "altcha/i18n/all.js",
     # Whether to include Altcha translations.
     # https://altcha.org/docs/v2/widget-integration/#internationalization-i18n
     "ALTCHA_INCLUDE_TRANSLATIONS": False,
+    # Key derivation function used for the Proof-of-Work challenges.
+    # Supported: "PBKDF2/SHA-256", "PBKDF2/SHA-384", "PBKDF2/SHA-512",
+    # "SHA-256", "SHA-384", "SHA-512", "ARGON2ID", "SCRYPT".
+    # https://altcha.org/docs/v2/proof-of-work-captcha/
+    "ALTCHA_ALGORITHM": "PBKDF2/SHA-256",
+    # Algorithm-specific cost: iterations for PBKDF2 and SHA, time cost for
+    # ARGON2ID and SCRYPT. 5000 is the value recommended upstream for
+    # PBKDF2/SHA-256.
+    "ALTCHA_COST": 5000,
+    # Serve the modular Altcha build, for projects enforcing a strict
+    # Content-Security-Policy (no inline styles, no `blob:` workers).
+    # https://altcha.org/docs/v2/content-security-policy-csp/
+    "ALTCHA_STRICT_CSP": False,
+    # URL of the modular Altcha JavaScript file, used in place of ALTCHA_JS_URL
+    # when ALTCHA_STRICT_CSP is enabled.
+    # Same resolution rules as ALTCHA_JS_URL above.
+    "ALTCHA_JS_STRICT_CSP_URL": "altcha/external/altcha.min.js",
+    # URL of the Altcha stylesheet, only used when ALTCHA_STRICT_CSP is enabled.
+    # The default build inlines its own styles and ignores this setting.
+    # Same resolution rules as ALTCHA_JS_URL above.
+    "ALTCHA_CSS_URL": "altcha/external/altcha.css",
+    # URL of the script registering the Proof-of-Work workers, only used when
+    # ALTCHA_STRICT_CSP is enabled.
+    # Same resolution rules as ALTCHA_JS_URL above.
+    "ALTCHA_WORKERS_REGISTER_URL": "altcha/external/altcha-workers.js",
+    # URL of the directory containing the Proof-of-Work worker scripts, only
+    # used when ALTCHA_STRICT_CSP is enabled.
+    # Defaults to `None`, in which case the registration script locates the
+    # workers relative to its own URL.
+    # Same resolution rules as ALTCHA_JS_URL above.
+    "ALTCHA_WORKERS_URL": None,
     # Challenge expiration duration in milliseconds.
     # Default to 20 minutes as per Altcha security recommendations.
     # https://altcha.org/docs/v2/security-recommendations/
@@ -50,7 +81,14 @@ _DEFAULTS = {
 
 # Settings whose value is a static asset path that should be resolved through
 # Django's staticfiles machinery when given as a relative path.
-_STATIC_ASSET_SETTINGS = {"ALTCHA_JS_URL", "ALTCHA_JS_TRANSLATIONS_URL"}
+_STATIC_ASSET_SETTINGS = {
+    "ALTCHA_JS_URL",
+    "ALTCHA_JS_TRANSLATIONS_URL",
+    "ALTCHA_JS_STRICT_CSP_URL",
+    "ALTCHA_CSS_URL",
+    "ALTCHA_WORKERS_REGISTER_URL",
+    "ALTCHA_WORKERS_URL",
+}
 
 
 def _is_absolute(path):

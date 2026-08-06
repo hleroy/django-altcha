@@ -24,9 +24,11 @@ class AltchaFieldLoggingTest(TestCase):
 
         self.form_class = TestForm
 
-    @mock.patch("altcha.verify_solution_v1")
+    @mock.patch("altcha.verify_solution")
     def test_invalid_token_logs_warning(self, mock_verify_solution):
-        mock_verify_solution.return_value = (False, "bad signature")
+        mock_verify_solution.return_value = mock.Mock(
+            verified=False, error="bad signature"
+        )
         form = self.form_class(data={"altcha_field": "anything"})
         with self.assertLogs("django_altcha", level="WARNING") as captured:
             form.is_valid()
@@ -34,7 +36,7 @@ class AltchaFieldLoggingTest(TestCase):
         self.assertEqual(captured.records[0].levelname, "WARNING")
         self.assertIn("bad signature", captured.output[0])
 
-    @mock.patch("altcha.verify_solution_v1")
+    @mock.patch("altcha.verify_solution")
     def test_verification_exception_is_logged_with_traceback(
         self, mock_verify_solution
     ):
@@ -46,10 +48,10 @@ class AltchaFieldLoggingTest(TestCase):
         # Confirms traceback is captured
         self.assertIsNotNone(captured.records[0].exc_info)
 
-    @mock.patch("altcha.verify_solution_v1")
+    @mock.patch("altcha.verify_solution")
     def test_replay_attempt_logs_warning(self, mock_verify_solution):
-        mock_verify_solution.return_value = (True, None)
-        valid_payload = make_valid_payload(challenge="replay-test-1")
+        mock_verify_solution.return_value = mock.Mock(verified=True)
+        valid_payload = make_valid_payload(signature="replay-test-1")
         # First submission succeeds and marks the challenge as used.
         self.form_class(data={"altcha_field": valid_payload}).is_valid()
         # Second submission should log a replay warning.

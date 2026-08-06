@@ -1,6 +1,71 @@
 Changelog
 =========
 
+v1.1.0 (unreleased)
+-------------------
+
+**WARNING Breaking changes:**
+
+1. The bundled JS widget is upgraded to ALTCHA v3.2.1, and the server side moves
+   from the v1 Proof-of-Work API to the v2 one. The ``altcha`` requirement is
+   raised to ``>=2.1.0,<3.0.0``.
+   ALTCHA v3 replaces the v1 hash-matching Proof-of-Work by a key derivation
+   function (KDF) based one. Challenges and payloads are not compatible across
+   versions: any challenge issued by a previous release is rejected after the
+   upgrade. In-flight form submissions will fail validation once and succeed on
+   retry.
+
+2. The ``AltchaField`` options are the ALTCHA v3 ones.
+   ``challengeurl`` and ``challengejson`` are replaced by a single ``challenge``
+   option, and are still accepted with a ``DeprecationWarning``.
+   Every other removed option—``floating``, ``overlay``, ``hidefooter``,
+   ``hidelogo``, ``maxnumber``, ``strings``, ``delay``, ``mockerror``,
+   ``disableautofocus``, ``refetchonexpire``, ``customfetch``, ``credentials``,
+   ``workerurl``, ``obfuscated``, ``id``, ``floatinganchor``, ``floatingoffset``,
+   ``floatingpersist``, ``overlaycontent``—raises a ``TypeError``.
+   Options that the widget does not accept as an HTML attribute are now
+   collected into the JSON-encoded ``configuration`` attribute.
+   https://github.com/altcha-org/altcha/blob/main/MIGRATION-v2.md
+
+3. ``get_altcha_challenge()`` takes ``algorithm`` and ``cost`` arguments in place
+   of ``max_number``, and returns an ``altcha.Challenge`` whose JSON
+   representation is obtained with ``to_dict()`` rather than ``__dict__``.
+   ``AltchaChallengeView`` accordingly exposes ``algorithm`` and ``cost``
+   attributes in place of ``max_number``.
+
+4. The bundled translations moved from ``static/altcha/dist_i18n/all.min.js`` to
+   ``static/altcha/i18n/all.js``, following the upstream v3 layout.
+   ALTCHA v3 does not publish a minified build of the combined translations.
+   Projects setting ``ALTCHA_JS_TRANSLATIONS_URL`` are not affected.
+
+- Upgrade the bundled JS library to the ALTCHA v3.2.1 release.
+  Move to the altcha-lib-py v2 API, released in v2.1.0.
+
+- Add a ``ALTCHA_STRICT_CSP`` setting, default to ``False``.
+  When enabled, the widget serves the modular ALTCHA build: the stylesheet is
+  served as a separate file and the Proof-of-Work workers are loaded from the
+  static files rather than from a ``blob:`` URL. This removes the need for
+  ``style-src 'unsafe-inline'`` and ``worker-src blob:`` in the
+  Content-Security-Policy.
+  https://altcha.org/docs/v2/content-security-policy-csp/
+
+- Add ``ALTCHA_JS_STRICT_CSP_URL``, ``ALTCHA_CSS_URL``,
+  ``ALTCHA_WORKERS_REGISTER_URL`` and ``ALTCHA_WORKERS_URL`` settings, only used
+  in strict CSP mode. They follow the same resolution rules as
+  ``ALTCHA_JS_URL``: relative paths go through ``STATIC_URL``, absolute paths
+  and full URLs are used as-is.
+
+- Add ``ALTCHA_ALGORITHM`` and ``ALTCHA_COST`` settings, defaulting to
+  ``"PBKDF2/SHA-256"`` and ``5000``.
+  The ``ARGON2ID`` algorithm requires the ``argon2-cffi`` package, available
+  through the new ``argon2`` extra.
+
+- Add a ``media`` property on ``AltchaWidget``, so the widget assets can be
+  included through ``{{ form.media }}`` instead of the widget template.
+
+- Replay attack protection now keys the cache on the challenge signature, the
+  ALTCHA v3 payload no longer carries a ``challenge`` string.
+
 v1.0.0 (2026-04-21)
 -------------------
 
