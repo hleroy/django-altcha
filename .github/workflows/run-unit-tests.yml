@@ -35,5 +35,8 @@ jobs:
       - name: Validate code format
         run: make check
 
+      - name: Check the vendored ALTCHA assets match package.json
+        run: make check-altcha
+
       - name: Run tests
         run: make test

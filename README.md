@@ -424,6 +424,21 @@ byte for byte (~34 KB gzipped, or ~30 KB for the modular build plus its
 stylesheet and worker). Choose the approach that fits your deployment, not the
 one you expect to be lighter.
 
+### Upgrading the vendored assets
+
+The version of Altcha vendored in this package is pinned in `package.json`, so
+Dependabot and Renovate propose upgrades like any other dependency. To apply
+one, merge the proposal and re-vendor the assets:
+
+```bash
+make sync-altcha
+```
+
+The assets are downloaded from the npm registry and each file is verified, byte
+for byte, against the matching git tag before being written. CI runs
+`make check-altcha`, which fails if the vendored files no longer match the
+pinned version or have been modified.
+
 ## Upgrading to ALTCHA v3
 
 django-altcha 1.1.0 bundles the ALTCHA v3 widget, which uses a new

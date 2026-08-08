@@ -49,11 +49,11 @@ v1.1.0 (unreleased)
   Content-Security-Policy.
   https://altcha.org/docs/v2/content-security-policy-csp/
 
-- Add ``ALTCHA_JS_STRICT_CSP_URL``, ``ALTCHA_CSS_URL``,
-  ``ALTCHA_WORKERS_REGISTER_URL`` and ``ALTCHA_WORKERS_URL`` settings, only used
-  in strict CSP mode. They follow the same resolution rules as
-  ``ALTCHA_JS_URL``: relative paths go through ``STATIC_URL``, absolute paths
-  and full URLs are used as-is.
+- Add ``ALTCHA_JS_STRICT_CSP_URL``, ``ALTCHA_CSS_URL`` and
+  ``ALTCHA_WORKERS_REGISTER_URL`` settings, only used in strict CSP mode. They
+  follow the same resolution rules as ``ALTCHA_JS_URL``: relative paths go
+  through ``STATIC_URL``, absolute paths and full URLs are used as-is.
+  ``ALTCHA_WORKERS_URL`` is also added, see below for its resolution rules.
 
 - Add ``ALTCHA_ALGORITHM`` and ``ALTCHA_COST`` settings, defaulting to
   ``"PBKDF2/SHA-256"`` and ``5000``.
@@ -76,6 +76,12 @@ v1.1.0 (unreleased)
   ``altcha/i18n/all.js``. Pointing ``ALTCHA_JS_TRANSLATIONS_URL`` at a single
   language, e.g. ``"altcha/i18n/fr-fr.js"``, costs 1.4 KB gzipped instead of
   18.2 KB for the combined bundle.
+
+- Pin the vendored ALTCHA version in ``package.json`` and add a Dependabot
+  configuration, so that widget upgrades are proposed automatically.
+  ``make sync-altcha`` re-vendors the pinned version, verifying every file
+  against the matching upstream git tag, and ``make check-altcha`` fails in CI
+  when the vendored assets drift from the pin.
 
 - Resolve the Proof-of-Work worker URLs one by one rather than passing a
   directory to the registration script, so that hashed staticfiles storages such

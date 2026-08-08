@@ -40,6 +40,14 @@ test:
 	@echo "-> Run the test suite"
 	@${ACTIVATE} pytest -s
 
+sync-altcha:
+	@echo "-> Vendor the ALTCHA assets pinned in package.json"
+	@${ACTIVATE} python scripts/sync_altcha.py
+
+check-altcha:
+	@echo "-> Check the vendored ALTCHA assets against package.json"
+	@${ACTIVATE} python scripts/sync_altcha.py --check
+
 dist:
 	@echo "-> Build source and wheel distributions"
 	@${ACTIVATE} pip install setuptools wheel
@@ -51,4 +59,4 @@ docs:
 	@${ACTIVATE} pip install ".[docs]"
 	@${ACTIVATE} sphinx-build --fresh-env --fail-on-warning ${DOCS_LOCATION}/source ${DOCS_LOCATION}/_build
 
-.PHONY: virtualenv dev check valid clean test dist docs
+.PHONY: virtualenv dev check valid clean test sync-altcha check-altcha dist docs
