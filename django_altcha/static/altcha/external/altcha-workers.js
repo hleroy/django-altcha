@@ -15,9 +15,10 @@
  * `$altcha` global. Both are `type="module"` scripts without `async`, so the
  * browser evaluates them in document order.
  *
- * The worker directory is resolved, in order of precedence, from:
- *   1. the `data-altcha-workers-url` attribute of any script tag on the page,
- *   2. this module's own URL (`../workers/` next to `external/`).
+ * Worker URLs are resolved by django-altcha and passed in as a JSON mapping of
+ * file name to URL, through the `data-altcha-workers` attribute. Resolving them
+ * server-side keeps them correct under hashed staticfiles storages. When the
+ * attribute is absent, the workers are looked up next to this module.
  */
 const ALGORITHMS = {
   "SHA-256": "sha.js",
@@ -30,14 +31,23 @@ const ALGORITHMS = {
   SCRYPT: "scrypt.js",
 };
 
-function getWorkersUrl() {
-  const script = document.querySelector("script[data-altcha-workers-url]");
-  const configured = script && script.dataset.altchaWorkersUrl;
-  const base = configured || new URL("../workers/", import.meta.url).href;
-  return base.endsWith("/") ? base : `${base}/`;
+function getWorkerUrls() {
+  const script = document.querySelector("script[data-altcha-workers]");
+  if (script) {
+    try {
+      return JSON.parse(script.dataset.altchaWorkers);
+    } catch {
+      throw new Error("Unable to parse the data-altcha-workers mapping.");
+    }
+  }
+  // No mapping provided: the workers sit next to this module, in ../workers/.
+  const base = new URL("../workers/", import.meta.url).href;
+  return Object.fromEntries(
+    Object.values(ALGORITHMS).map((name) => [name, `${base}${name}`]),
+  );
 }
 
-const workersUrl = getWorkersUrl();
+const workerUrls = getWorkerUrls();
 const altcha = globalThis.$altcha;
 
 if (!altcha || !altcha.algorithms) {
@@ -47,8 +57,8 @@ if (!altcha || !altcha.algorithms) {
 }
 
 for (const [algorithm, filename] of Object.entries(ALGORITHMS)) {
-  altcha.algorithms.set(
-    algorithm,
-    () => new Worker(new URL(filename, workersUrl)),
-  );
+  const url = workerUrls[filename];
+  if (url) {
+    altcha.algorithms.set(algorithm, () => new Worker(url));
+  }
 }

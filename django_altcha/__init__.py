@@ -26,6 +26,7 @@ from django.views.decorators.http import require_GET
 import altcha
 
 from .conf import get_setting
+from .conf import get_workers_urls
 
 __version__ = "1.1.0"
 VERSION = __version__
@@ -147,13 +148,10 @@ def get_workers_register_script():
     """
     Return the URL of the worker registration module and its extra attributes.
 
-    The module locates the worker scripts next to itself, unless the
-    ``ALTCHA_WORKERS_URL`` setting declares another location.
+    The worker URLs are resolved server-side and handed to the module as a JSON
+    mapping, so that they stay correct under a hashed staticfiles storage.
     """
-    attrs = {}
-    workers_url = get_setting("ALTCHA_WORKERS_URL")
-    if workers_url:
-        attrs["data-altcha-workers-url"] = workers_url
+    attrs = {"data-altcha-workers": json.dumps(get_workers_urls())}
     return get_setting("ALTCHA_WORKERS_REGISTER_URL"), attrs
 
 
@@ -191,6 +189,10 @@ class AltchaWidget(HiddenInput):
         Return the assets of the widget, for projects relying on ``form.media``
         rather than on the assets included by the widget template.
         """
+        # The project loads ALTCHA on its own, typically from a bundler.
+        if not get_setting("ALTCHA_INCLUDE_ASSETS"):
+            return forms.Media()
+
         js = [ModuleScript(get_js_url())]
 
         if get_setting("ALTCHA_INCLUDE_TRANSLATIONS"):
@@ -208,6 +210,7 @@ class AltchaWidget(HiddenInput):
     def get_context(self, name, value, attrs):
         """Generate the widget context, including ALTCHA assets and challenge."""
         context = super().get_context(name, value, attrs)
+        context["include_assets"] = get_setting("ALTCHA_INCLUDE_ASSETS")
         context["strict_csp"] = get_setting("ALTCHA_STRICT_CSP")
         context["js_altcha_url"] = get_js_url()
         context["css_altcha_url"] = get_setting("ALTCHA_CSS_URL")

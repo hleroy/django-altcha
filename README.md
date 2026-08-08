@@ -261,6 +261,16 @@ a strict
 [Content Security Policy](https://altcha.org/docs/v2/content-security-policy-csp/).
 Defaults to `False`.
 
+### ALTCHA_INCLUDE_ASSETS
+
+Whether the widget loads the Altcha assets itself, through its template and its
+`media`. Defaults to `True`.
+
+Set to `False` when your project loads Altcha on its own, for example when
+bundling the `altcha` npm package with webpack or Vite — see the
+*Bundling Altcha yourself* section below. The `<altcha-widget>` element and its
+challenge are still rendered; only the asset tags are omitted.
+
 ### ALTCHA_JS_URL
 
 URL of the Altcha JavaScript file.
@@ -294,9 +304,13 @@ Only used when `ALTCHA_STRICT_CSP` is `True`.
 
 ### ALTCHA_WORKERS_URL
 
-URL of the directory containing the Proof-of-Work worker scripts.
-Defaults to `None`, in which case the registration script locates the workers
-relative to its own URL, next to the bundled `altcha-workers.js`.
+Base URL of the directory serving the Proof-of-Work worker scripts.
+Defaults to `None`, in which case the bundled workers are used, each resolved
+individually through the staticfiles storage.
+
+Unlike the other asset settings this one names a directory rather than a file,
+so it is **not** resolved through `STATIC_URL`: give an absolute path or a
+fully-qualified URL.
 
 Only used when `ALTCHA_STRICT_CSP` is `True`.
 
@@ -308,7 +322,16 @@ Defaults to `False`.
 ### ALTCHA_JS_TRANSLATIONS_URL
 
 URL of the Altcha translations JavaScript file.
-Defaults to the bundled django-altcha file.
+Defaults to `altcha/i18n/all.js`, the combined bundle covering every supported
+language.
+
+django-altcha also bundles one file per language. Serving a single one is much
+lighter than the combined bundle — **1.4 KB gzipped instead of 18.2 KB**:
+
+```python
+ALTCHA_INCLUDE_TRANSLATIONS = True
+ALTCHA_JS_TRANSLATIONS_URL = "altcha/i18n/fr-fr.js"
+```
 
 Only loaded when `ALTCHA_INCLUDE_TRANSLATIONS` is `True`.
 
@@ -358,6 +381,48 @@ LOGGING = {
 
 Set `"level": "ERROR"` to see only misconfiguration and unexpected failures,
 or `"level": "DEBUG"` to see additional diagnostic messages during development.
+
+## Bundling Altcha yourself
+
+By default django-altcha serves the Altcha assets it bundles, and no JavaScript
+toolchain is required. If your project already builds its front-end with
+webpack or Vite, you can install Altcha from npm instead and let your bundler
+own it — which also lets Dependabot or Renovate track Altcha releases for you.
+
+Set `ALTCHA_INCLUDE_ASSETS = False` so the widget stops emitting asset tags,
+then import Altcha from your own entry point:
+
+```bash
+npm install altcha@3.2.1
+```
+
+```javascript
+// For a strict Content-Security-Policy, use the modular build and register the
+// workers explicitly. Use `import "altcha";` for the default all-in-one bundle.
+import "altcha/external";
+import "altcha/altcha.css";
+
+$altcha.algorithms.set(
+  "PBKDF2/SHA-256",
+  () => new Worker(new URL("altcha/workers/pbkdf2", import.meta.url)),
+);
+```
+
+> [!IMPORTANT]
+> Import the worker **without** the `.js` extension. With webpack,
+> `new URL("altcha/workers/pbkdf2.js", ...)` fails with a misleading
+> `Module not found: ./workers/pbkdf2.ts` error, caused by how the package's
+> `exports` pattern is expanded.
+
+> [!NOTE]
+> Extract the stylesheet with `mini-css-extract-plugin` rather than injecting it
+> with `style-loader`, which would need `style-src 'unsafe-inline'`.
+
+Bundling does not make Altcha smaller: it has no named exports, so there is
+nothing for a bundler to tree-shake, and the output matches the bundled file
+byte for byte (~34 KB gzipped, or ~30 KB for the modular build plus its
+stylesheet and worker). Choose the approach that fits your deployment, not the
+one you expect to be lighter.
 
 ## Upgrading to ALTCHA v3
 

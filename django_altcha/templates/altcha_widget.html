@@ -1,4 +1,4 @@
-{% if strict_csp %}<link rel="stylesheet" href="{{ css_altcha_url }}">
+{% if include_assets %}{% if strict_csp %}<link rel="stylesheet" href="{{ css_altcha_url }}">
 {# Module scripts are deferred and evaluated in document order: the worker #}
 {# registration below always runs after the widget module is loaded. #}
 <script src="{{ js_altcha_url }}" type="module"></script>
@@ -6,7 +6,7 @@
 <script src="{{ js_workers_register_url }}" type="module"{% for key, value in workers_attrs.items %} {{ key }}="{{ value }}"{% endfor %}></script>
 {% else %}<script async defer src="{{ js_altcha_url }}" type="module"></script>
 {% if include_translations %}<script async defer src="{{ js_translations_url }}" type="module"></script>{% endif %}
-{% endif %}
+{% endif %}{% endif %}
 {% include "django/forms/widgets/input.html" %}
 <altcha-widget name="{{ widget.name }}"
     {% for key, value in widget.altcha_options.items %}

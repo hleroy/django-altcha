@@ -66,6 +66,23 @@ v1.1.0 (unreleased)
 - Replay attack protection now keys the cache on the challenge signature, the
   ALTCHA v3 payload no longer carries a ``challenge`` string.
 
+- Add a ``ALTCHA_INCLUDE_ASSETS`` setting, default to ``True``.
+  Set it to ``False`` when the project loads ALTCHA on its own, for instance
+  when bundling the ``altcha`` npm package with webpack or Vite: the widget then
+  emits no ``<script>`` or ``<link>`` tag and its ``media`` is empty, while the
+  ``<altcha-widget>`` element and its challenge are still rendered.
+
+- Bundle one translation file per language in addition to the combined
+  ``altcha/i18n/all.js``. Pointing ``ALTCHA_JS_TRANSLATIONS_URL`` at a single
+  language, e.g. ``"altcha/i18n/fr-fr.js"``, costs 1.4 KB gzipped instead of
+  18.2 KB for the combined bundle.
+
+- Resolve the Proof-of-Work worker URLs one by one rather than passing a
+  directory to the registration script, so that hashed staticfiles storages such
+  as ``ManifestStaticFilesStorage`` produce usable URLs.
+  ``ALTCHA_WORKERS_URL`` is now used as a plain prefix and is no longer resolved
+  through ``STATIC_URL``: it takes an absolute path or a full URL.
+
 v1.0.0 (2026-04-21)
 -------------------
 

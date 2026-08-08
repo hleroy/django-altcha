@@ -32,7 +32,14 @@ _DEFAULTS = {
     # Relative paths are passed through Django's staticfiles storage,
     # so they work with STATIC_URL customization and ManifestStaticFilesStorage.
     "ALTCHA_JS_URL": "altcha/altcha.min.js",
+    # Whether the widget includes the Altcha assets itself, through its template
+    # and its `media`. Set to `False` when the project loads Altcha on its own,
+    # for instance when bundling `altcha` from npm with webpack or Vite.
+    # The `<altcha-widget>` element and its challenge are still rendered.
+    "ALTCHA_INCLUDE_ASSETS": True,
     # URL of the Altcha translations JavaScript file.
+    # Defaults to the combined bundle covering every supported language.
+    # A single language is much lighter, e.g. "altcha/i18n/fr-fr.js".
     # Same resolution rules as ALTCHA_JS_URL above.
     "ALTCHA_JS_TRANSLATIONS_URL": "altcha/i18n/all.js",
     # Whether to include Altcha translations.
@@ -63,11 +70,13 @@ _DEFAULTS = {
     # ALTCHA_STRICT_CSP is enabled.
     # Same resolution rules as ALTCHA_JS_URL above.
     "ALTCHA_WORKERS_REGISTER_URL": "altcha/external/altcha-workers.js",
-    # URL of the directory containing the Proof-of-Work worker scripts, only
+    # Base URL of the directory serving the Proof-of-Work worker scripts, only
     # used when ALTCHA_STRICT_CSP is enabled.
-    # Defaults to `None`, in which case the registration script locates the
-    # workers relative to its own URL.
-    # Same resolution rules as ALTCHA_JS_URL above.
+    # Defaults to `None`, in which case the bundled workers are used, each
+    # resolved individually through the staticfiles storage.
+    # Unlike the settings above, this one names a directory rather than a file,
+    # so it is NOT resolved through staticfiles: give an absolute path or a
+    # fully-qualified URL.
     "ALTCHA_WORKERS_URL": None,
     # Challenge expiration duration in milliseconds.
     # Default to 20 minutes as per Altcha security recommendations.
@@ -87,7 +96,15 @@ _STATIC_ASSET_SETTINGS = {
     "ALTCHA_JS_STRICT_CSP_URL",
     "ALTCHA_CSS_URL",
     "ALTCHA_WORKERS_REGISTER_URL",
-    "ALTCHA_WORKERS_URL",
+}
+
+# Proof-of-Work worker scripts bundled with django-altcha, as a mapping of the
+# upstream file name to its path in the static files.
+BUNDLED_WORKERS = {
+    "pbkdf2.js": "altcha/workers/pbkdf2.js",
+    "sha.js": "altcha/workers/sha.js",
+    "argon2id.js": "altcha/workers/argon2id.js",
+    "scrypt.js": "altcha/workers/scrypt.js",
 }
 
 
@@ -96,17 +113,43 @@ def _is_absolute(path):
     return path.startswith(("http://", "https://", "/"))
 
 
+def get_static_url(path):
+    """
+    Resolve a static asset path through STATIC_URL so it respects the project's
+    staticfiles configuration and storage backend. Absolute paths and full URLs
+    are passed through untouched, matching the convention used by Django's form
+    Media class.
+    """
+    if not path or _is_absolute(path):
+        return path
+    return static(path)
+
+
 def get_setting(name):
     """Look up a django-altcha setting, falling back to the default."""
     if name not in _DEFAULTS:
         raise ValueError(f"Unknown django-altcha setting: {name}")
     value = getattr(settings, name, _DEFAULTS[name])
 
-    # Resolve relative static paths through STATIC_URL so they respect the
-    # project's staticfiles configuration and storage backend. Absolute paths
-    # and full URLs are passed through untouched, matching the convention
-    # used by Django's form Media class.
-    if name in _STATIC_ASSET_SETTINGS and value and not _is_absolute(value):
-        return static(value)
+    if name in _STATIC_ASSET_SETTINGS:
+        return get_static_url(value)
 
     return value
+
+
+def get_workers_urls():
+    """
+    Return the URLs of the Proof-of-Work worker scripts, keyed by file name.
+
+    The bundled workers are resolved one by one so that hashed storages such as
+    ``ManifestStaticFilesStorage`` produce usable URLs. A directory path cannot
+    be resolved that way, so ``ALTCHA_WORKERS_URL`` is used as a plain prefix.
+    """
+    base_url = get_setting("ALTCHA_WORKERS_URL")
+
+    if not base_url:
+        return {name: get_static_url(path) for name, path in BUNDLED_WORKERS.items()}
+
+    if not base_url.endswith("/"):
+        base_url += "/"
+    return {name: f"{base_url}{name}" for name in BUNDLED_WORKERS}

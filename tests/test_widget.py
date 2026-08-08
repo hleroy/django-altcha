@@ -6,11 +6,16 @@
 #
 
 import json
+from pathlib import Path
 
 from django.test import TestCase
 from django.test import override_settings
 
+import django_altcha
 from django_altcha import AltchaWidget
+from django_altcha.conf import get_workers_urls
+
+MANIFEST_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 JS_URL = "/static/altcha/altcha.min.js"
 JS_STRICT_CSP_URL = "/static/altcha/external/altcha.min.js"
@@ -173,7 +178,7 @@ class DjangoAltchaWidgetStrictCSPTest(TestCase):
         rendered = AltchaWidget().render("name", "value")
         self.assertIn(f'<link rel="stylesheet" href="{CSS_URL}">', rendered)
         self.assertIn(f'<script src="{JS_STRICT_CSP_URL}" type="module">', rendered)
-        self.assertIn(f'<script src="{WORKERS_REGISTER_URL}" type="module">', rendered)
+        self.assertIn(f'<script src="{WORKERS_REGISTER_URL}" type="module"', rendered)
         # No `async`: module scripts must be evaluated in document order so that
         # the workers are registered after the widget module is loaded.
         self.assertNotIn("async", rendered)
@@ -189,18 +194,43 @@ class DjangoAltchaWidgetStrictCSPTest(TestCase):
         self.assertIn('src="/assets/altcha/external/altcha-workers.js"', rendered)
 
     @override_settings(ALTCHA_STRICT_CSP=True)
-    def test_strict_csp_workers_url_setting(self):
-        rendered = AltchaWidget().render("name", "value")
+    def test_strict_csp_workers_are_resolved_individually(self):
+        # Each worker is resolved on its own so that hashed staticfiles storages
+        # produce usable URLs; a directory path could not be resolved that way.
+        self.assertEqual(
+            {
+                "pbkdf2.js": "/static/altcha/workers/pbkdf2.js",
+                "sha.js": "/static/altcha/workers/sha.js",
+                "argon2id.js": "/static/altcha/workers/argon2id.js",
+                "scrypt.js": "/static/altcha/workers/scrypt.js",
+            },
+            get_workers_urls(),
+        )
+
+    @override_settings(ALTCHA_STRICT_CSP=True)
+    def test_strict_csp_workers_url_setting_is_used_as_a_prefix(self):
+        with override_settings(ALTCHA_WORKERS_URL="https://cdn/workers"):
+            urls = get_workers_urls()
+        # A missing trailing slash is added
+        self.assertEqual("https://cdn/workers/pbkdf2.js", urls["pbkdf2.js"])
+        self.assertEqual("https://cdn/workers/scrypt.js", urls["scrypt.js"])
+
+    @override_settings(ALTCHA_STRICT_CSP=True)
+    def test_strict_csp_workers_mapping_is_rendered_as_json(self):
+        with override_settings(ALTCHA_WORKERS_URL="/assets/workers/"):
+            rendered = AltchaWidget().render("name", "value")
+
+        self.assertIn("data-altcha-workers=", rendered)
+        self.assertIn("/assets/workers/pbkdf2.js", rendered)
         self.assertNotIn("data-altcha-workers-url", rendered)
 
-        with override_settings(ALTCHA_WORKERS_URL="https://cdn/workers/"):
-            rendered = AltchaWidget().render("name", "value")
-        self.assertIn('data-altcha-workers-url="https://cdn/workers/"', rendered)
-
-        # A relative path is resolved through STATIC_URL
-        with override_settings(ALTCHA_WORKERS_URL="altcha/workers/"):
-            rendered = AltchaWidget().render("name", "value")
-        self.assertIn('data-altcha-workers-url="/static/altcha/workers/"', rendered)
+    @override_settings(ALTCHA_STRICT_CSP=True, STATICFILES_STORAGE=MANIFEST_STORAGE)
+    def test_strict_csp_workers_under_hashed_storage(self):
+        # Regression: a directory path has no manifest entry and used to raise.
+        urls = get_workers_urls()
+        self.assertEqual(4, len(urls))
+        for url in urls.values():
+            self.assertTrue(url.startswith("/static/altcha/workers/"), url)
 
     @override_settings(ALTCHA_STRICT_CSP=True)
     def test_strict_csp_js_url_override(self):
@@ -239,12 +269,17 @@ class DjangoAltchaWidgetMediaTest(TestCase):
     @override_settings(ALTCHA_STRICT_CSP=True)
     def test_media_strict_csp(self):
         media = AltchaWidget().media
+        rendered_js = media.render_js()
+        self.assertEqual(2, len(rendered_js))
         self.assertEqual(
-            [
-                f'<script src="{JS_STRICT_CSP_URL}" type="module"></script>',
-                f'<script src="{WORKERS_REGISTER_URL}" type="module"></script>',
-            ],
-            media.render_js(),
+            f'<script src="{JS_STRICT_CSP_URL}" type="module"></script>', rendered_js[0]
+        )
+        self.assertTrue(
+            rendered_js[1].startswith(
+                f'<script src="{WORKERS_REGISTER_URL}" type="module" '
+                "data-altcha-workers="
+            ),
+            rendered_js[1],
         )
         self.assertEqual(
             [f'<link href="{CSS_URL}" media="all" rel="stylesheet">'],
@@ -256,8 +291,70 @@ class DjangoAltchaWidgetMediaTest(TestCase):
         with override_settings(ALTCHA_WORKERS_URL="/assets/workers/"):
             media = AltchaWidget().media
 
-        self.assertIn(
-            f'<script src="{WORKERS_REGISTER_URL}" type="module"'
-            ' data-altcha-workers-url="/assets/workers/"></script>',
-            media.render_js(),
-        )
+        self.assertIn("/assets/workers/pbkdf2.js", media.render_js()[1])
+
+
+class DjangoAltchaWidgetIncludeAssetsTest(TestCase):
+    """The project loads ALTCHA itself, e.g. bundled from npm with webpack."""
+
+    @override_settings(ALTCHA_INCLUDE_ASSETS=False)
+    def test_no_assets_are_rendered_by_the_template(self):
+        rendered = AltchaWidget().render("name", "value")
+        self.assertNotIn("<script", rendered)
+        self.assertNotIn("<link", rendered)
+
+    @override_settings(ALTCHA_INCLUDE_ASSETS=False)
+    def test_the_widget_element_and_challenge_are_still_rendered(self):
+        rendered = AltchaWidget().render("name", "value")
+        self.assertIn("<altcha-widget", rendered)
+        self.assertIn('name="name"', rendered)
+        self.assertIn("challenge=", rendered)
+        self.assertIn("PBKDF2/SHA-256", rendered)
+
+    @override_settings(ALTCHA_INCLUDE_ASSETS=False)
+    def test_media_is_empty(self):
+        media = AltchaWidget().media
+        self.assertEqual([], media.render_js())
+        self.assertEqual([], list(media.render_css()))
+
+    @override_settings(ALTCHA_INCLUDE_ASSETS=False, ALTCHA_STRICT_CSP=True)
+    def test_no_assets_are_rendered_in_strict_csp_mode_either(self):
+        # The two settings are orthogonal: nothing is emitted, including the
+        # stylesheet and the worker registration script.
+        rendered = AltchaWidget().render("name", "value")
+        self.assertNotIn("<script", rendered)
+        self.assertNotIn("<link", rendered)
+        self.assertNotIn(WORKERS_REGISTER_URL, rendered)
+        self.assertEqual([], AltchaWidget().media.render_js())
+
+    @override_settings(ALTCHA_INCLUDE_ASSETS=False, ALTCHA_INCLUDE_TRANSLATIONS=True)
+    def test_translations_are_not_rendered_either(self):
+        rendered = AltchaWidget().render("name", "value")
+        self.assertNotIn(JS_TRANSLATIONS_URL, rendered)
+        self.assertEqual([], AltchaWidget().media.render_js())
+
+    def test_assets_are_included_by_default(self):
+        rendered = AltchaWidget().render("name", "value")
+        self.assertIn("<script", rendered)
+
+
+class DjangoAltchaWidgetTranslationsTest(TestCase):
+    def test_a_single_language_can_be_used_instead_of_the_full_bundle(self):
+        overrides = {
+            "ALTCHA_INCLUDE_TRANSLATIONS": True,
+            "ALTCHA_JS_TRANSLATIONS_URL": "altcha/i18n/fr-fr.js",
+        }
+        with override_settings(**overrides):
+            rendered = AltchaWidget().render("name", "value")
+
+        self.assertIn("/static/altcha/i18n/fr-fr.js", rendered)
+        self.assertNotIn(JS_TRANSLATIONS_URL, rendered)
+
+    def test_bundled_language_files_are_shipped(self):
+        i18n_dir = Path(django_altcha.__file__).parent / "static/altcha/i18n"
+        language_files = sorted(p.name for p in i18n_dir.glob("*.js"))
+        self.assertIn("all.js", language_files)
+        for name in ["en.js", "fr-fr.js", "de.js", "es-es.js", "pt-br.js", "zh-cn.js"]:
+            self.assertIn(name, language_files)
+        # One file per supported language, plus the combined bundle.
+        self.assertGreater(len(language_files), 60)
