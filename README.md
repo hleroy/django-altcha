@@ -12,6 +12,19 @@ It is **secure by default**, with built-in **protection against replay attacks**
 ensuring each challenge is only ever validated once, and it supports a **strict
 Content-Security-Policy** without `'unsafe-inline'` styles or `blob:` workers.
 
+## Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration Options](#configuration-options)
+- [Content Security Policy (CSP)](#content-security-policy-csp)
+- [Settings](#settings)
+- [Logging](#logging)
+- [Bundling Altcha yourself](#bundling-altcha-yourself)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Installation
 
 1. **Install the package:**
@@ -439,10 +452,36 @@ for byte, against the matching git tag before being written. CI runs
 `make check-altcha`, which fails if the vendored files no longer match the
 pinned version or have been modified.
 
+## Development
+
+Set up a virtualenv with the development dependencies:
+
+```bash
+make dev
+```
+
+| Command | What it does |
+|---|---|
+| `make test` | Run the test suite |
+| `make check` | Validate formatting and linting with Ruff |
+| `make valid` | Apply Ruff formatting and autofixes |
+| `make sync-altcha` | Re-vendor the ALTCHA assets pinned in `package.json` |
+| `make check-altcha` | Verify the vendored assets match the pin (runs in CI) |
+| `make dist` | Build the source and wheel distributions |
+| `make clean` | Remove the virtualenv and build artifacts |
+
+The ALTCHA widget assets are vendored under
+`django_altcha_widget/static/altcha/`, so no JavaScript toolchain is needed to
+install or develop the package. `make sync-altcha` is the only step that needs
+npm's registry, and it is only needed when upgrading ALTCHA.
+
 ## Contributing
 
-We welcome contributions to improve this library.
-Feel free to submit issues or pull requests!
+Issues and pull requests are welcome.
+
+Please run `make check` and `make test` before opening a pull request. If your
+change touches the vendored assets, run `make check-altcha` too — CI runs it and
+will fail if the assets drift from the version pinned in `package.json`.
 
 ## License
 

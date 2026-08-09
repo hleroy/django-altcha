@@ -45,20 +45,9 @@ dev = [
     "pytest-django",
     "argon2-cffi",
 ]
-docs = [
-    "Sphinx>=5.0.2",
-    "sphinx-rtd-theme>=1.0.0",
-    "sphinx-reredirects >= 0.1.2",
-    "doc8>=0.11.2",
-    "sphinx-autobuild",
-    "sphinx-rtd-dark-mode>=1.3.0",
-    "sphinx-copybutton",
-    "myst-parser",
-]
 
 [project.urls]
 Homepage = "https://github.com/hleroy/django-altcha"
-Documentation = "https://django-altcha-widget.readthedocs.io/"
 Repository = "https://github.com/hleroy/django-altcha.git"
 Issues = "https://github.com/hleroy/django-altcha/issues"
 Changelog = "https://github.com/hleroy/django-altcha/blob/main/CHANGELOG.rst"
@@ -71,11 +60,6 @@ include = ["django_altcha_widget"]
 
 [tool.setuptools.package-data]
 django_altcha_widget = ["static/**", "templates/**"]
-
-[tool.ruff]
-exclude = [
-    "docs",
-]
 
 [tool.ruff.lint]
 # Rules: https://docs.astral.sh/ruff/rules/

@@ -2,7 +2,6 @@
 PYTHON_EXE?=python3
 VENV_LOCATION=.venv
 ACTIVATE?=. ${VENV_LOCATION}/bin/activate;
-DOCS_LOCATION=./docs
 
 virtualenv:
 	@echo "-> Bootstrap the virtualenv with PYTHON_EXE=${PYTHON_EXE}"
@@ -46,10 +45,4 @@ dist:
 	@${ACTIVATE} pip install setuptools wheel
 	@${ACTIVATE} python -m build
 
-docs:
-	@echo "-> Builds the installation_and_sysadmin docs"
-	rm -rf ${DOCS_LOCATION}/_build/
-	@${ACTIVATE} pip install ".[docs]"
-	@${ACTIVATE} sphinx-build --fresh-env --fail-on-warning ${DOCS_LOCATION}/source ${DOCS_LOCATION}/_build
-
-.PHONY: virtualenv dev check valid clean test sync-altcha check-altcha dist docs
+.PHONY: virtualenv dev check valid clean test sync-altcha check-altcha dist
