@@ -4,7 +4,7 @@ updates:
   # The ALTCHA widget assets are vendored under django_altcha_widget/static/altcha/,
   # but the version is pinned in package.json so that upgrades are proposed
   # here. After merging such an update, re-vendor the assets with:
-  #     make sync-altcha
+  #     just sync-altcha
   # CI fails until the vendored files match the pinned version.
   - package-ecosystem: "npm"
     directory: "/"

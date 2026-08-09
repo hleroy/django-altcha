@@ -14,5 +14,5 @@
     "workers/": "dist/workers/",
     "i18n/": "dist/i18n/ (regional bundles excluded)"
   },
-  "notes": "external/altcha-workers.js is not part of upstream ALTCHA. It is provided by django-altcha-widget and covered by this project's LICENSE. Run `make sync-altcha` to re-vendor; see scripts/sync_altcha.py."
+  "notes": "external/altcha-workers.js is not part of upstream ALTCHA. It is provided by django-altcha-widget and covered by this project's LICENSE. Run `just sync-altcha` to re-vendor; see scripts/sync_altcha.py."
 }

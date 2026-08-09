@@ -62,6 +62,6 @@ Maintenance
 ~~~~~~~~~~~
 
 - The vendored ALTCHA version is pinned in ``package.json`` so that Dependabot
-  and Renovate propose upgrades. ``make sync-altcha`` re-vendors the pinned
+  and Renovate propose upgrades. ``just sync-altcha`` re-vendors the pinned
   version, verifying every file against the matching upstream git tag, and
-  ``make check-altcha`` fails in CI when the vendored assets drift from the pin.
+  ``just check-altcha`` fails in CI when the vendored assets drift from the pin.

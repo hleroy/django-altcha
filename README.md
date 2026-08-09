@@ -52,7 +52,7 @@ Content-Security-Policy** without `'unsafe-inline'` styles or `blob:` workers.
    Update your Django project's `settings.py`:
 
    ```python
-   ALTCHA_HMAC_KEY="your_secret_hmac_key"
+   ALTCHA_HMAC_KEY = "your_secret_hmac_key"
    ```
 
 > [!NOTE]
@@ -69,6 +69,7 @@ your form definition:
 ```python
 from django import forms
 from django_altcha_widget import AltchaField
+
 
 class MyForm(forms.Form):
     captcha = AltchaField()
@@ -104,10 +105,11 @@ Every other option is collected into the JSON-encoded `configuration` attribute.
 from django import forms
 from django_altcha_widget import AltchaField
 
+
 class MyForm(forms.Form):
     captcha = AltchaField(
         display="floating",  # Enables floating behavior
-        debug=True,          # Enables debug mode (for development)
+        debug=True,  # Enables debug mode (for development)
         # Additional options supported by Altcha
     )
 ```
@@ -139,6 +141,7 @@ Once the URL is registered, you can configure your `AltchaField` to use it via t
 from django.urls import reverse_lazy
 from django import forms
 from django_altcha_widget import AltchaField
+
 
 class MyForm(forms.Form):
     captcha = AltchaField(
@@ -211,12 +214,12 @@ If you want to use a dedicated cache for ALTCHA, define one and point to it:
 
 ```python
 CACHES = {
-    'altcha': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379',
+    "altcha": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379",
     }
 }
-ALTCHA_CACHE_ALIAS = 'altcha'
+ALTCHA_CACHE_ALIAS = "altcha"
 ```
 
 **Using Database Caching:**
@@ -227,12 +230,12 @@ is a simple alternative:
 
 ```python
 CACHES = {
-    'altcha': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'altcha_cache',
+    "altcha": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "altcha_cache",
     }
 }
-ALTCHA_CACHE_ALIAS = 'altcha'
+ALTCHA_CACHE_ALIAS = "altcha"
 ```
 
 Then create the cache table:
@@ -444,43 +447,46 @@ Dependabot and Renovate propose upgrades like any other dependency. To apply
 one, merge the proposal and re-vendor the assets:
 
 ```bash
-make sync-altcha
+just sync-altcha
 ```
 
 The assets are downloaded from the npm registry and each file is verified, byte
 for byte, against the matching git tag before being written. CI runs
-`make check-altcha`, which fails if the vendored files no longer match the
+`just check-altcha`, which fails if the vendored files no longer match the
 pinned version or have been modified.
 
 ## Development
 
+Tasks are defined in the `justfile` and run with [just](https://just.systems),
+installable with `pip install rust-just` or your package manager.
+
 Set up a virtualenv with the development dependencies:
 
 ```bash
-make dev
+just dev
 ```
 
-| Command | What it does |
+| Recipe | What it does |
 |---|---|
-| `make test` | Run the test suite |
-| `make check` | Validate formatting and linting with Ruff |
-| `make valid` | Apply Ruff formatting and autofixes |
-| `make sync-altcha` | Re-vendor the ALTCHA assets pinned in `package.json` |
-| `make check-altcha` | Verify the vendored assets match the pin (runs in CI) |
-| `make dist` | Build the source and wheel distributions |
-| `make clean` | Remove the virtualenv and build artifacts |
+| `just test` | Run the test suite |
+| `just check` | Validate formatting and linting with Ruff |
+| `just valid` | Apply Ruff formatting and autofixes |
+| `just sync-altcha` | Re-vendor the ALTCHA assets pinned in `package.json` |
+| `just check-altcha` | Verify the vendored assets match the pin (runs in CI) |
+| `just dist` | Build the source and wheel distributions |
+| `just clean` | Remove the virtualenv and build artifacts |
 
 The ALTCHA widget assets are vendored under
 `django_altcha_widget/static/altcha/`, so no JavaScript toolchain is needed to
-install or develop the package. `make sync-altcha` is the only step that needs
+install or develop the package. `just sync-altcha` is the only step that needs
 npm's registry, and it is only needed when upgrading ALTCHA.
 
 ## Contributing
 
 Issues and pull requests are welcome.
 
-Please run `make check` and `make test` before opening a pull request. If your
-change touches the vendored assets, run `make check-altcha` too — CI runs it and
+Please run `just check` and `just test` before opening a pull request. If your
+change touches the vendored assets, run `just check-altcha` too — CI runs it and
 will fail if the assets drift from the version pinned in `package.json`.
 
 ## License

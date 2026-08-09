@@ -1,6 +1,7 @@
 recursive-include scripts *.py
 
 include LICENSE
+include justfile
 include NOTICE
 include *.toml
 include package.json
