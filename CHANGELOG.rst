@@ -1,138 +1,67 @@
 Changelog
 =========
 
-v1.0.0 (2026-04-21)
+v1.0.0 (unreleased)
 -------------------
 
-- feat: add logging for validation failures and misconfiguration
-  https://github.com/aboutcode-org/django-altcha/pull/46
+First release of ``django-altcha-widget``, a Django form field and widget for
+the ALTCHA proof-of-work CAPTCHA.
 
-- fix(settings): resolve static asset URLs through STATIC_URL
-  https://github.com/aboutcode-org/django-altcha/pull/45
+The project began as a fork of `django-altcha
+<https://github.com/aboutcode-org/django-altcha>`_ and is released under the
+same MIT License, but it is published as a separate package and shares no
+release history with it. Installing both in the same environment is not
+supported.
 
-- fix(deps): cap altcha at <2.0.0 for incompatible v2 release
-  https://github.com/aboutcode-org/django-altcha/pull/44
+Features
+~~~~~~~~
 
-v0.10.0 (2026-03-10)
--------------------
+- ``AltchaField`` and ``AltchaWidget`` for Django forms, self-hosted by default:
+  the challenge is generated locally and inlined into the rendered HTML, with no
+  request to an external service.
 
-**WARNING Breaking changes:**
+- Bundled ALTCHA v3.2.1 widget, so ``pip install django-altcha-widget`` requires
+  no JavaScript toolchain. Assets are vendored under
+  ``django_altcha_widget/static/altcha/`` and their provenance is recorded in
+  ``VENDOR.json``.
 
-1. ALTCHA_HMAC_KEY is now mandatory.
-  If it's not set in your Django settings, the app will raise ImproperlyConfigured at
-  the first challenge creation or validation, instead of silently generating a random
-  fallback key.
+- Proof-of-work challenges built on the KDF-based ALTCHA v2 scheme, through the
+  ``altcha`` library. ``ALTCHA_ALGORITHM`` and ``ALTCHA_COST`` select the key
+  derivation function and its cost, defaulting to ``"PBKDF2/SHA-256"`` and
+  ``5000``. ``ARGON2ID`` and ``SCRYPT`` are supported; ``ARGON2ID`` needs the
+  ``argon2-cffi`` package, available through the ``argon2`` extra.
 
-2. ALTCHA_CACHE_ALIAS now defaults to "default" instead of using a dedicated LocMemCache
-  instance. This means ALTCHA automatically benefits from whatever cache backend your
-  project already has configured.
-  Projects that explicitly set ALTCHA_CACHE_ALIAS are not affected.
-  Removed the internal LocMemCache fallback. Cache configuration is now fully handled
-  through Django's CACHES setting.
+- Replay attack protection, enabled by default: a verified challenge is recorded
+  in the Django cache by its signature and cannot be submitted twice.
 
-- Refactor the cache configuration using "default" when not provided.
-  https://github.com/aboutcode-org/django-altcha/pull/36
+- ``AltchaChallengeView``, for serving challenges from a URL rather than inlining
+  them.
 
-- Make the ALTCHA_HMAC_KEY setting mandatory.
-  https://github.com/aboutcode-org/django-altcha/pull/35
+- Strict Content-Security-Policy support through ``ALTCHA_STRICT_CSP``. The
+  widget then serves the modular ALTCHA build: the stylesheet is a separate file
+  and the proof-of-work workers are loaded from the static files rather than from
+  a ``blob:`` URL, so neither ``style-src 'unsafe-inline'`` nor
+  ``worker-src blob:`` is needed.
+  https://altcha.org/docs/v2/content-security-policy-csp/
 
-- Refactor the ALTCHA_* settings loading.
-  https://github.com/aboutcode-org/django-altcha/pull/34
+- ``ALTCHA_INCLUDE_ASSETS``, for projects that load ALTCHA themselves — for
+  instance by bundling the ``altcha`` npm package with webpack or Vite. The
+  widget then emits no asset tags and its ``media`` is empty, while the
+  ``<altcha-widget>`` element and its challenge are still rendered.
 
-v0.9.1 (2026-03-05)
--------------------
+- Assets available either through the widget template or through Django's
+  ``{{ form.media }}``.
 
-- fix: replace altcha.i18n.js bundle by proper dist_i18n/all.js
-  https://github.com/aboutcode-org/django-altcha/issues/28
+- Every asset URL is configurable and resolved through ``STATIC_URL``, so hashed
+  storages such as ``ManifestStaticFilesStorage`` and CDN hosting both work.
 
-v0.9.0 (2026-01-05)
--------------------
+- Translations for 68 languages, either as a per-language file (1.4 KB gzipped)
+  or as the combined bundle.
 
-- Upgrade bundled JS library to latest ALTCHA v2.3.0 release.
-  Upgrade altcha-lib-py to v1.0.0 release.
-  https://github.com/aboutcode-org/django-altcha/pull/25
+Maintenance
+~~~~~~~~~~~
 
-- Add support for ALTCHA translations.
-  https://github.com/aboutcode-org/django-altcha/pull/23
-
-- Add replay attack protection documentation.
-  https://github.com/aboutcode-org/django-altcha/pull/26
-
-v0.4.0 (2025-10-21)
--------------------
-
-- Upgrade bundled JS library to latest ALTCHA v2.2.4 release.
-  https://github.com/aboutcode-org/django-altcha/pull/20
-
-- Add support for Python 3.14
-  https://github.com/aboutcode-org/django-altcha/pull/21
-
-- Add support for providing dict values to AltchaWidget.
-  https://github.com/aboutcode-org/django-altcha/pull/20
-
-v0.3.0 (2025-07-25)
--------------------
-
-- Add the ``ALTCHA_HMAC_KEY`` setup as part of the installation.
-  A DeprecationWarning is raised when the ``ALTCHA_HMAC_KEY`` is not explicitly defined.
-  Providing the ``ALTCHA_HMAC_KEY`` will be mandatory in future release.
-  https://github.com/aboutcode-org/django-altcha/issues/15
-
-- Add a ``ALTCHA_VERIFICATION_ENABLED`` setting, default to ``True``.
-  This setting, when set to ``False``, allows to skip Altcha validation altogether.
-
-v0.2.0 (2025-06-17)
--------------------
-
-Special thanks to Alex Vandiver alexmv@zulip.com for reporting these issues.
-
-**Important Security Note:**
-If you have previously set and used a static ``ALTCHA_HMAC_KEY``,
-you **must rotate this key** as part of upgrading to this release.
-
-Earlier versions of ``django-altcha`` accepted challenges that were generated without
-an expiration (``expires``) value.
-This allowed older challenges to remain valid indefinitely.
-As a result, any attacker with access to an old challenge could reuse it to bypass
-CAPTCHA validation.
-
-To fully benefit from the security improvements in this release,
-you must also **invalidate any existing challenges** by rotating the HMAC key used
-to generate and verify them.
-
-- Add a AltchaChallengeView to allow  `challengeurl` a setup.
-  This view returns a challenge as JSON to be fetched by the Altcha JS widget.
-  https://github.com/aboutcode-org/django-altcha/pull/9
-
-- Add challenge expiration support.
-  Default to 20 minutes as per Altcha security recommendations.
-  Can be customized through the `ALTCHA_CHALLENGE_EXPIRE` setting.
-  https://altcha.org/docs/v2/security-recommendations/
-  https://github.com/aboutcode-org/django-altcha/pull/7
-
-- Add protection against replay attacks.
-  Verified challenges are now marked as used and cannot be reused,
-  helping to prevent repeated or spoofed submissions.
-  https://github.com/aboutcode-org/django-altcha/issues/10
-
-v0.1.3 (2025-04-15)
--------------------
-
-- Use the value from the AltchaField `maxnumber` option, when provided, to generate the
-  challenge in `get_altcha_challenge`.
-  https://github.com/aboutcode-org/django-altcha/issues/5
-
-v0.1.2 (2025-03-31)
--------------------
-
-- Add missing templates/ and static/ directories in the distribution builds.
-
-v0.1.1 (2025-03-31)
--------------------
-
-- Add unit tests.
-
-v0.1.0 (2025-03-31)
--------------------
-
-- Initial release.
+- The vendored ALTCHA version is pinned in ``package.json`` so that Dependabot
+  and Renovate propose upgrades. ``just sync-altcha`` re-vendors the pinned
+  version, verifying every file against the matching upstream git tag, and
+  ``just check-altcha`` fails in CI when the vendored assets drift from the pin.

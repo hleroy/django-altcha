@@ -1,11 +1,11 @@
-# Release instructions for `django-altcha`
+# Release instructions for `django-altcha-widget`
 
 ### Automated release workflow
 
 - Create a new `release-x.x.x` branch
 - Update the version in:
   - `pyproject.toml`
-  - `django_altcha/__init__.py`
+  - `django_altcha_widget/__init__.py`
   - `CHANGELOG.rst` (set date)
 - Commit and push this branch
 - Create a PR and merge once approved
@@ -17,12 +17,12 @@
   git push origin $VERSION
   ```
 - Review the GitHub release created by the workflow at 
-  https://github.com/aboutcode-org/django-altcha/releases
+  https://github.com/hleroy/django-altcha/releases
 
 ### Manual build
 
 ```
-cd django-altcha
+cd django-altcha-widget
 source .venv/bin/activate
 pip install build
 python -m build --sdist --wheel --outdir dist/ .

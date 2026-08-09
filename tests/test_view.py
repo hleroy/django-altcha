@@ -1,11 +1,5 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 from django.test import TestCase
+from django.test import override_settings
 from django.urls import reverse
 
 
@@ -22,8 +16,28 @@ class DjangoAltchaViewTest(TestCase):
         response = self.client.get(reverse("altcha_challenge"))
         data = response.json()
 
-        expected_keys = ["algorithm", "challenge", "max_number", "salt", "signature"]
-        self.assertEqual(expected_keys, list(data.keys()))
+        self.assertEqual(["parameters", "signature"], list(data.keys()))
 
-        self.assertEqual("SHA-256", data["algorithm"])
-        self.assertEqual(100, data["max_number"])
+        expected_keys = [
+            "algorithm",
+            "cost",
+            "keyLength",
+            "keyPrefix",
+            "nonce",
+            "salt",
+            "expiresAt",
+        ]
+        parameters = data["parameters"]
+        self.assertEqual(expected_keys, list(parameters.keys()))
+
+        self.assertEqual("PBKDF2/SHA-256", parameters["algorithm"])
+        # The `cost` view attribute is applied
+        self.assertEqual(100, parameters["cost"])
+
+    def test_challenge_view_algorithm_and_cost_settings(self):
+        with override_settings(ALTCHA_ALGORITHM="SHA-512", ALTCHA_COST=42):
+            response = self.client.get(reverse("altcha_challenge_defaults"))
+
+        parameters = response.json()["parameters"]
+        self.assertEqual("SHA-512", parameters["algorithm"])
+        self.assertEqual(42, parameters["cost"])

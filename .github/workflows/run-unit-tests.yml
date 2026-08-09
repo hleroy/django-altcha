@@ -29,11 +29,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install just
+        run: pip install rust-just
+
       - name: Install dependencies
-        run: make dev
+        run: just dev
 
       - name: Validate code format
-        run: make check
+        run: just check
+
+      - name: Check the vendored ALTCHA assets match package.json
+        run: just check-altcha
 
       - name: Run tests
-        run: make test
+        run: just test

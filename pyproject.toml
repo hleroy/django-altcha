@@ -3,14 +3,14 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "django-altcha"
+name = "django-altcha-widget"
 version = "1.0.0"
-description = "Django field and widget for Altcha CAPTCHA."
+description = "Django form field and widget for the ALTCHA proof-of-work CAPTCHA."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-  { name = "nexB Inc.", email = "info@nexb.com" }
+  { name = "Hervé Le Roy", email = "hleroy@hleroy.com" }
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -30,47 +30,36 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "Django>=4.2",
-    "altcha>=2.0.0,<3.0.0",
+    "altcha>=2.1.0,<3.0.0",  # server-side challenge creation and verification
 ]
-keywords = ["captcha", "django", "widget", "form", "altcha"]
+keywords = ["captcha", "django", "widget", "form", "altcha", "proof-of-work", "privacy"]
 
 [project.optional-dependencies]
+# Required to generate and verify ARGON2ID challenges.
+argon2 = [
+    "argon2-cffi",
+]
 dev = [
     "build",
     "ruff",
     "pytest-django",
-]
-docs = [
-    "Sphinx>=5.0.2",
-    "sphinx-rtd-theme>=1.0.0",
-    "sphinx-reredirects >= 0.1.2",
-    "doc8>=0.11.2",
-    "sphinx-autobuild",
-    "sphinx-rtd-dark-mode>=1.3.0",
-    "sphinx-copybutton",
-    "myst-parser",
+    "argon2-cffi",
 ]
 
 [project.urls]
-Homepage = "https://github.com/aboutcode-org/django-altcha"
-Documentation = "https://django-altcha.readthedocs.io/"
-Repository = "https://github.com/aboutcode-org/django-altcha.git"
-Issues = "https://github.com/aboutcode-org/django-altcha/issues"
-Changelog = "https://github.com/aboutcode-org/django-altcha/blob/main/CHANGELOG.rst"
+Homepage = "https://github.com/hleroy/django-altcha"
+Repository = "https://github.com/hleroy/django-altcha.git"
+Issues = "https://github.com/hleroy/django-altcha/issues"
+Changelog = "https://github.com/hleroy/django-altcha/blob/main/CHANGELOG.rst"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["django_altcha"]
+include = ["django_altcha_widget"]
 
 [tool.setuptools.package-data]
-django_altcha = ["static/**", "templates/**"]
-
-[tool.ruff]
-exclude = [
-    "docs",
-]
+django_altcha_widget = ["static/**", "templates/**"]
 
 [tool.ruff.lint]
 # Rules: https://docs.astral.sh/ruff/rules/

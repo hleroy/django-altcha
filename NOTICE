@@ -1,6 +1,11 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
+django-altcha-widget
+Copyright (c) Hervé Le Roy and contributors
+SPDX-License-Identifier: MIT
+
+This project began as a fork of django-altcha, Copyright (c) nexB Inc. and
+others, released under the MIT License. Both copyright notices are retained in
+LICENSE as that license requires.
+
+This package vendors the ALTCHA widget, Copyright (c) 2023 Daniel Regeci,
+released under the MIT License. See django_altcha_widget/static/altcha/VENDOR.json
+for the exact version and provenance, and https://altcha.org for the project.
