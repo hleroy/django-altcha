@@ -1,16 +1,12 @@
-graft src
 recursive-include scripts *.py
 
 include LICENSE
 include NOTICE
-include *.ABOUT
 include *.toml
 include package.json
 include package-lock.json
 include *.yml
 include *.rst
-include setup.*
-include requirements*
 include .git*
 
 global-exclude *.py[co] __pycache__ *.*~

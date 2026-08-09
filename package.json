@@ -1,12 +1,12 @@
 {
-  "name": "django-altcha",
+  "name": "django-altcha-widget",
   "version": "0.0.0",
   "private": true,
-  "description": "Front-end dependency pin for django-altcha. The assets are vendored into django_altcha/static/altcha/ by scripts/sync_altcha.py; this file is not published to npm and is not required to install or use django-altcha.",
+  "description": "Front-end dependency pin for django-altcha-widget. The assets are vendored into django_altcha_widget/static/altcha/ by scripts/sync_altcha.py; this file is not published to npm and is not required to install or use django-altcha-widget.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aboutcode-org/django-altcha.git"
+    "url": "git+https://github.com/hleroy/django-altcha.git"
   },
   "dependencies": {
     "altcha": "3.2.1"

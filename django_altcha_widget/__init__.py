@@ -1,15 +1,7 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 import base64
 import datetime
 import json
 import logging
-import warnings
 
 from django import forms
 from django.core.cache import caches
@@ -28,7 +20,7 @@ import altcha
 from .conf import get_setting
 from .conf import get_workers_urls
 
-__version__ = "1.1.0"
+__version__ = "1.0.0"
 VERSION = __version__
 
 logger = logging.getLogger(__name__)
@@ -78,13 +70,6 @@ WIDGET_CONFIGURATION = (
     "validationMessage",
     "verifyUrl",
 )
-
-# ALTCHA v2 widget options replaced by a single `challenge` option in v3.
-# https://github.com/altcha-org/altcha/blob/main/MIGRATION-v2.md
-RENAMED_OPTIONS = {
-    "challengeurl": "challenge",
-    "challengejson": "challenge",
-}
 
 
 def get_hmac_key():
@@ -176,7 +161,7 @@ class ModuleScript(str):
 
 
 class AltchaWidget(HiddenInput):
-    template_name = "altcha_widget.html"
+    template_name = "django_altcha_widget/altcha_widget.html"
 
     def __init__(self, options=None, *args, **kwargs):
         """Initialize the ALTCHA widget with provided options from the field."""
@@ -282,17 +267,6 @@ class AltchaField(forms.Field):
 
     def __init__(self, *args, **kwargs):
         """Initialize the ALTCHA field and pass widget options for rendering."""
-        for old_name, new_name in RENAMED_OPTIONS.items():
-            if old_name in kwargs:
-                warnings.warn(
-                    f"The AltchaField {old_name!r} option was removed in ALTCHA v3, "
-                    f"use {new_name!r} instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                kwargs.setdefault(new_name, kwargs.pop(old_name))
-                kwargs.pop(old_name, None)
-
         widget_options = {
             key: kwargs.pop(key, self.default_options[key])
             for key in self.default_options

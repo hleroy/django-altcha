@@ -1,10 +1,3 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 import base64
 import json
 from unittest import mock
@@ -16,10 +9,10 @@ from django.test import override_settings
 
 import altcha
 
-from django_altcha import AltchaField
-from django_altcha import AltchaWidget
-from django_altcha import get_altcha_challenge
-from django_altcha import is_challenge_used
+from django_altcha_widget import AltchaField
+from django_altcha_widget import AltchaWidget
+from django_altcha_widget import get_altcha_challenge
+from django_altcha_widget import is_challenge_used
 
 TEST_CHALLENGE = "test-challenge-123"
 
@@ -52,20 +45,8 @@ class DjangoAltchaFieldTest(TestCase):
         self.assertEqual(10000, altcha_field.widget.options["timeout"])
 
     def test_altcha_field_unknown_option_is_rejected(self):
-        # `maxnumber` and `floating` are ALTCHA v2 options, removed in v3.
         with self.assertRaises(TypeError):
-            AltchaField(maxnumber=50)
-        with self.assertRaises(TypeError):
-            AltchaField(floating=True)
-
-    def test_altcha_field_deprecated_challenge_options(self):
-        with self.assertWarns(DeprecationWarning):
-            altcha_field = AltchaField(challengeurl="/altcha/challenge/")
-        self.assertEqual("/altcha/challenge/", altcha_field.widget.options["challenge"])
-
-        with self.assertWarns(DeprecationWarning):
-            altcha_field = AltchaField(challengejson='{"parameters": {}}')
-        self.assertEqual('{"parameters": {}}', altcha_field.widget.options["challenge"])
+            AltchaField(not_an_altcha_option=50)
 
     def test_altcha_field_validate_verification_enabled_setting(self):
         altcha_field = AltchaField()

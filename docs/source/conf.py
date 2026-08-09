@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "django-altcha"
-copyright = "nexB Inc. and others."
-author = "AboutCode.org authors and contributors"
+project = "django-altcha-widget"
+copyright = "Hervé Le Roy and contributors"
+author = "Hervé Le Roy"
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,12 +42,11 @@ extensions = [
 # See https://documatt.gitlab.io/sphinx-reredirects/usage.html
 redirects = {}
 
-# This points to aboutcode.readthedocs.io
-# In case of "undefined label" ERRORS check docs on intersphinx to troubleshoot
-# Link was created at commit - https://github.com/aboutcode-org/aboutcode/commit/faea9fcf3248f8f198844fe34d43833224ac4a83
-
 intersphinx_mapping = {
-    "aboutcode": ("https://aboutcode.readthedocs.io/en/latest/", None),
+    "django": (
+        "https://docs.djangoproject.com/en/stable/",
+        "https://docs.djangoproject.com/en/stable/_objects/",
+    ),
 }
 
 
@@ -76,9 +75,9 @@ master_doc = "index"
 
 html_context = {
     "display_github": True,
-    "github_user": "aboutcode-org",
+    "github_user": "hleroy",
     "github_repo": "django-altcha",
-    "github_version": "develop",  # branch
+    "github_version": "main",  # branch
     "conf_py_path": "/docs/source/",  # path in the checkout to the docs root
 }
 

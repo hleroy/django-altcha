@@ -1,12 +1,5 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 """
-Lazy settings access for django-altcha.
+Lazy settings access for django-altcha-widget.
 
 Django settings read at module import time can capture stale or default
 values if the module is imported before settings are fully configured.
@@ -24,7 +17,7 @@ _DEFAULTS = {
     # This key is used to HMAC-sign ALTCHA challenges and must be kept secret.
     "ALTCHA_HMAC_KEY": None,
     # URL of the Altcha JavaScript file.
-    # Defaults to the bundled django-altcha file, resolved through STATIC_URL.
+    # Defaults to the bundled django-altcha-widget file, resolved through STATIC_URL.
     # Accepts:
     #  - a relative static path (e.g. "altcha/altcha.min.js"),
     #  - an absolute path starting with "/",
@@ -98,7 +91,7 @@ _STATIC_ASSET_SETTINGS = {
     "ALTCHA_WORKERS_REGISTER_URL",
 }
 
-# Proof-of-Work worker scripts bundled with django-altcha, as a mapping of the
+# Proof-of-Work worker scripts bundled with django-altcha-widget, as a mapping of the
 # upstream file name to its path in the static files.
 BUNDLED_WORKERS = {
     "pbkdf2.js": "altcha/workers/pbkdf2.js",
@@ -126,9 +119,9 @@ def get_static_url(path):
 
 
 def get_setting(name):
-    """Look up a django-altcha setting, falling back to the default."""
+    """Look up a django-altcha-widget setting, falling back to the default."""
     if name not in _DEFAULTS:
-        raise ValueError(f"Unknown django-altcha setting: {name}")
+        raise ValueError(f"Unknown django-altcha-widget setting: {name}")
     value = getattr(settings, name, _DEFAULTS[name])
 
     if name in _STATIC_ASSET_SETTINGS:

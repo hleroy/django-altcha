@@ -1,7 +1,8 @@
 /*
- * Copyright (c) nexB Inc. and others. All rights reserved.
+ * Copyright (c) Hervé Le Roy and contributors.
  * SPDX-License-Identifier: MIT
- * See https://github.com/aboutcode-org/django-altcha for support or download.
+ *
+ * Part of django-altcha-widget, not of upstream ALTCHA.
  *
  * Registers the ALTCHA Proof-of-Work workers for the modular "external" build.
  *
@@ -15,7 +16,7 @@
  * `$altcha` global. Both are `type="module"` scripts without `async`, so the
  * browser evaluates them in document order.
  *
- * Worker URLs are resolved by django-altcha and passed in as a JSON mapping of
+ * Worker URLs are resolved by django-altcha-widget and passed in as a JSON mapping of
  * file name to URL, through the `data-altcha-workers` attribute. Resolving them
  * server-side keeps them correct under hashed staticfiles storages. When the
  * attribute is absent, the workers are looked up next to this module.

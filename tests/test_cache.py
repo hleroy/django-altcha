@@ -1,10 +1,3 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 import time
 import unittest
 from unittest import mock
@@ -12,11 +5,11 @@ from unittest import mock
 from django.core.cache.backends.locmem import LocMemCache
 from django.test import override_settings
 
-from django_altcha import get_cache
-from django_altcha import get_challenge_expire_seconds
-from django_altcha import is_challenge_used
-from django_altcha import mark_challenge_used
-from django_altcha.conf import get_setting
+from django_altcha_widget import get_cache
+from django_altcha_widget import get_challenge_expire_seconds
+from django_altcha_widget import is_challenge_used
+from django_altcha_widget import mark_challenge_used
+from django_altcha_widget.conf import get_setting
 
 
 class DjangoAltchaCacheTest(unittest.TestCase):
@@ -24,7 +17,7 @@ class DjangoAltchaCacheTest(unittest.TestCase):
         self.challenge = "test-challenge-123"
 
     @override_settings(ALTCHA_CACHE_ALIAS="altcha")
-    @mock.patch("django_altcha.caches")
+    @mock.patch("django_altcha_widget.caches")
     def test_get_cache_with_alias(self, mock_caches):
         get_cache()
         mock_caches.__getitem__.assert_called_once_with("altcha")

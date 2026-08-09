@@ -1,4 +1,4 @@
-INSTALLED_APPS = ["django_altcha"]
+INSTALLED_APPS = ["django_altcha_widget"]
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3"}}
 ROOT_URLCONF = "tests.urls"
 STATIC_URL = "/static/"

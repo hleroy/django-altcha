@@ -7,7 +7,7 @@ on:
       - "v*.*.*"
 
 env:
-  PYPI_PROJECT_URL: "https://pypi.org/p/django-altcha"
+  PYPI_PROJECT_URL: "https://pypi.org/p/django-altcha-widget"
   BUILD_VERSION: "1.4.0"
 
 jobs:

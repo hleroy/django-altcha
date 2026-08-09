@@ -1,19 +1,12 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 import json
 from pathlib import Path
 
 from django.test import TestCase
 from django.test import override_settings
 
-import django_altcha
-from django_altcha import AltchaWidget
-from django_altcha.conf import get_workers_urls
+import django_altcha_widget
+from django_altcha_widget import AltchaWidget
+from django_altcha_widget.conf import get_workers_urls
 
 MANIFEST_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
@@ -351,7 +344,7 @@ class DjangoAltchaWidgetTranslationsTest(TestCase):
         self.assertNotIn(JS_TRANSLATIONS_URL, rendered)
 
     def test_bundled_language_files_are_shipped(self):
-        i18n_dir = Path(django_altcha.__file__).parent / "static/altcha/i18n"
+        i18n_dir = Path(django_altcha_widget.__file__).parent / "static/altcha/i18n"
         language_files = sorted(p.name for p in i18n_dir.glob("*.js"))
         self.assertIn("all.js", language_files)
         for name in ["en.js", "fr-fr.js", "de.js", "es-es.js", "pt-br.js", "zh-cn.js"]:

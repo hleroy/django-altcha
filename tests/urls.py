@@ -1,13 +1,6 @@
-#
-# Copyright (c) nexB Inc. and others. All rights reserved.
-# SPDX-License-Identifier: MIT
-# See https://github.com/aboutcode-org/django-altcha for support or download.
-# See https://aboutcode.org for more information about AboutCode FOSS projects.
-#
-
 from django.urls import path
 
-from django_altcha import AltchaChallengeView
+from django_altcha_widget import AltchaChallengeView
 
 urlpatterns = [
     path(

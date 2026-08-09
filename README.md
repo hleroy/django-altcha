@@ -1,23 +1,23 @@
-# Django Altcha
+# django-altcha-widget
 
-**Django Altcha** is a Django library that provides easy integration of Altcha CAPTCHA
-into your Django forms, enhancing user verification with configurable options.
+A Django form field and widget for [ALTCHA](https://altcha.org), the
+privacy-friendly proof-of-work CAPTCHA.
 
-By default, CAPTCHA validation operates in a **fully self-hosted mode**, 
-**eliminating the need for external services** while ensuring privacy and control over
-the verification process.
+By default it runs in a **fully self-hosted mode**: the challenge is generated
+by your own server and inlined into the rendered form, so no request ever
+reaches an external service. The ALTCHA widget itself is bundled, so installing
+the package needs no JavaScript toolchain.
 
-**Django Altcha** is **secure by default**, featuring built-in 
-**protection against replay attacks** to ensure each challenge is validated only once. 
-This helps safeguard your forms from repeated or spoofed submissions without 
-requiring additional configuration.
+It is **secure by default**, with built-in **protection against replay attacks**
+ensuring each challenge is only ever validated once, and it supports a **strict
+Content-Security-Policy** without `'unsafe-inline'` styles or `blob:` workers.
 
 ## Installation
 
 1. **Install the package:**
 
    ```bash
-   pip install django-altcha
+   pip install django-altcha-widget
    ```
 
 2. **Add to `INSTALLED_APPS`:**
@@ -27,7 +27,7 @@ requiring additional configuration.
    ```python
    INSTALLED_APPS = [
        # Other installed apps
-       "django_altcha",
+       "django_altcha_widget",
    ]
    ```
 
@@ -55,7 +55,7 @@ your form definition:
 
 ```python
 from django import forms
-from django_altcha import AltchaField
+from django_altcha_widget import AltchaField
 
 class MyForm(forms.Form):
     captcha = AltchaField()
@@ -89,7 +89,7 @@ Every other option is collected into the JSON-encoded `configuration` attribute.
 
 ```python
 from django import forms
-from django_altcha import AltchaField
+from django_altcha_widget import AltchaField
 
 class MyForm(forms.Form):
     captcha = AltchaField(
@@ -107,12 +107,12 @@ into the rendered HTML as JSON, using the `challenge` option.
 Alternatively, you can provide a URL that the Altcha widget’s JavaScript will fetch to 
 retrieve the challenge, using that same `challenge` option.
 
-A ready-to-use `AltchaChallengeView` is available in `django_altcha`. 
+A ready-to-use `AltchaChallengeView` is available in `django_altcha_widget`. 
 To enable it, register the view in your `urlpatterns`, for example:
 
 ```python
 from django.urls import path
-from django_altcha import AltchaChallengeView
+from django_altcha_widget import AltchaChallengeView
 
 urlpatterns += [
     path("altcha/challenge/", AltchaChallengeView.as_view(), name="altcha_challenge"),
@@ -125,7 +125,7 @@ Once the URL is registered, you can configure your `AltchaField` to use it via t
 ```python
 from django.urls import reverse_lazy
 from django import forms
-from django_altcha import AltchaField
+from django_altcha_widget import AltchaField
 
 class MyForm(forms.Form):
     captcha = AltchaField(
@@ -164,7 +164,7 @@ Content-Security-Policy: script-src 'self'; style-src 'self'; worker-src 'self'
 
 ### Replay Attack Protection
 
-Django Altcha **automatically protects against replay attacks** by ensuring each 
+django-altcha-widget **automatically protects against replay attacks** by ensuring each 
 challenge can only be used once.
 When a challenge is successfully validated, it is stored in a
 cache and any subsequent attempt to reuse the same challenge will be rejected.
@@ -246,7 +246,7 @@ for the trade-offs between them.
 
 > [!NOTE]
 > `"ARGON2ID"` requires the `argon2-cffi` package, installable with
-> `pip install django-altcha[argon2]`.
+> `pip install django-altcha-widget[argon2]`.
 
 ### ALTCHA_COST
 
@@ -274,7 +274,7 @@ challenge are still rendered; only the asset tags are omitted.
 ### ALTCHA_JS_URL
 
 URL of the Altcha JavaScript file.
-Defaults to the bundled django-altcha file.
+Defaults to the bundled django-altcha-widget file.
 
 Ignored when `ALTCHA_STRICT_CSP` is `True`, which uses
 `ALTCHA_JS_STRICT_CSP_URL` instead: the two builds are different artifacts and
@@ -283,14 +283,14 @@ are not interchangeable.
 ### ALTCHA_JS_STRICT_CSP_URL
 
 URL of the modular Altcha JavaScript file.
-Defaults to the bundled django-altcha file.
+Defaults to the bundled django-altcha-widget file.
 
 Only used when `ALTCHA_STRICT_CSP` is `True`.
 
 ### ALTCHA_CSS_URL
 
 URL of the Altcha stylesheet.
-Defaults to the bundled django-altcha file.
+Defaults to the bundled django-altcha-widget file.
 
 Only used when `ALTCHA_STRICT_CSP` is `True`, the default build inlines its own
 styles.
@@ -298,7 +298,7 @@ styles.
 ### ALTCHA_WORKERS_REGISTER_URL
 
 URL of the script registering the Proof-of-Work workers with the modular build.
-Defaults to the bundled django-altcha file.
+Defaults to the bundled django-altcha-widget file.
 
 Only used when `ALTCHA_STRICT_CSP` is `True`.
 
@@ -325,7 +325,7 @@ URL of the Altcha translations JavaScript file.
 Defaults to `altcha/i18n/all.js`, the combined bundle covering every supported
 language.
 
-django-altcha also bundles one file per language. Serving a single one is much
+django-altcha-widget also bundles one file per language. Serving a single one is much
 lighter than the combined bundle — **1.4 KB gzipped instead of 18.2 KB**:
 
 ```python
@@ -343,7 +343,7 @@ Defaults to `True`.
 ## Logging
 
 Django Altcha uses the standard Python `logging` module under the logger name
-`django_altcha`. No logs are emitted under normal operation; logging fires only
+`django_altcha_widget`. No logs are emitted under normal operation; logging fires only
 on validation failures and misconfiguration.
 
 ### What gets logged
@@ -359,7 +359,7 @@ messages.
 
 ### Enabling logs
 
-Add the `django_altcha` logger to your project's `LOGGING` setting:
+Add the `django_altcha_widget` logger to your project's `LOGGING` setting:
 
 ```python
 LOGGING = {
@@ -371,7 +371,7 @@ LOGGING = {
         },
     },
     "loggers": {
-        "django_altcha": {
+        "django_altcha_widget": {
             "handlers": ["console"],
             "level": "WARNING",
         },
@@ -384,7 +384,7 @@ or `"level": "DEBUG"` to see additional diagnostic messages during development.
 
 ## Bundling Altcha yourself
 
-By default django-altcha serves the Altcha assets it bundles, and no JavaScript
+By default django-altcha-widget serves the Altcha assets it bundles, and no JavaScript
 toolchain is required. If your project already builds its front-end with
 webpack or Vite, you can install Altcha from npm instead and let your bundler
 own it — which also lets Dependabot or Renovate track Altcha releases for you.
@@ -439,35 +439,6 @@ for byte, against the matching git tag before being written. CI runs
 `make check-altcha`, which fails if the vendored files no longer match the
 pinned version or have been modified.
 
-## Upgrading to ALTCHA v3
-
-django-altcha 1.1.0 bundles the ALTCHA v3 widget, which uses a new
-Proof-of-Work mechanism. Challenges and payloads produced by the previous
-release are not compatible with this one.
-
-> [!IMPORTANT]
-> Any challenge issued before the upgrade becomes invalid. In-flight form
-> submissions will fail validation once and succeed on retry.
-
-The widget options changed as well:
-
-| Removed in v3                    | Replacement                                    |
-|----------------------------------|------------------------------------------------|
-| `challengeurl`, `challengejson`  | `challenge`                                    |
-| `floating`, `overlay`            | `display="floating"`, `display="overlay"`      |
-| `hidefooter`, `hidelogo`         | `hideFooter`, `hideLogo`                       |
-| `maxnumber`                      | `ALTCHA_ALGORITHM` / `ALTCHA_COST` settings    |
-| `strings`                        | `language` plus `ALTCHA_INCLUDE_TRANSLATIONS`  |
-| `mockerror`, `delay`             | `mockError`, `minDuration`                     |
-| `disableautofocus`               | `disableAutoFocus`                             |
-| `refetchonexpire`, `customfetch` | *(no equivalent)*                              |
-
-Passing a removed option raises a `TypeError`, except for `challengeurl` and
-`challengejson` which are mapped to `challenge` with a `DeprecationWarning`.
-
-See the [ALTCHA v3 migration guide](https://github.com/altcha-org/altcha/blob/main/MIGRATION-v2.md)
-for the complete list.
-
 ## Contributing
 
 We welcome contributions to improve this library.
@@ -476,5 +447,14 @@ Feel free to submit issues or pull requests!
 ## License
 
 This project is licensed under the **MIT License**.
-See the [LICENSE](https://github.com/aboutcode-org/django-altcha/blob/main/LICENSE) 
+See the [LICENSE](https://github.com/hleroy/django-altcha/blob/main/LICENSE)
 file for details.
+
+It began as a fork of [django-altcha](https://github.com/aboutcode-org/django-altcha),
+Copyright (c) nexB Inc. and others, also MIT licensed. It is published as a
+separate package and shares no release history with it; installing both in the
+same environment is not supported.
+
+The bundled ALTCHA widget is Copyright (c) 2023 Daniel Regeci, MIT licensed.
+Its exact version and provenance are recorded in
+`django_altcha_widget/static/altcha/VENDOR.json`.
